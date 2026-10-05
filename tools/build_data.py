@@ -1,29 +1,34 @@
 """
 build_data.py - собирает LocalizationData.lua для аддона ItemLoc.
 
-Данные берутся из таблицы ItemSparse клиента WoW Forever через wago.tools.
-Запуск:   python build_data.py
-Результат: файл ItemLoc/LocalizationData.lua в папке аддона.
+Данные берутся из таблицы ItemSparse через wago.tools:
+  1) клиент WoW Forever (главный источник);
+  2) клиент Classic Era (запасной): часть предметов в таблицах Forever отсутствует,
+     хотя в игре они есть. Названия таких предметов берутся из Classic Era.
+
+Запуск:    python tools/build_data.py
+Результат: файл LocalizationData.lua рядом с ItemLoc.toc
 """
 import csv
 import io
+import os
 import sys
+import urllib.error
 import urllib.request
 
-# Номер сборки Forever. Актуальный список: https://wago.tools/builds
-# (ищите продукт wow_classic_beta, версии вида 1.60.1.xxxxx)
-BUILD = "1.60.1.70170"
+# Сборки пробуются по очереди, берётся первая, которая скачалась.
+# Актуальные номера: https://wago.tools/builds
+FOREVER_BUILDS = ["1.60.1.70205", "1.60.1.70170"]      # продукт wow_classic_beta
+CLASSIC_ERA_BUILDS = ["1.15.9.69722"]                  # продукт wow_classic_era
 
-# Ключ в аддоне -> код языка в wago.tools. Добавляйте языки по желанию:
-# "fr": "frFR", "es": "esES"
+# Ключ в аддоне -> код языка в wago.tools. Можно добавить: "fr": "frFR", "es": "esES"
 LOCALES = {"en": "enUS", "ru": "ruRU", "de": "deDE"}
 
-import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "LocalizationData.lua")
 
 
-def download(locale_code):
-    url = f"https://wago.tools/db2/ItemSparse/csv?build={BUILD}&locale={locale_code}"
+def download(build, locale_code):
+    url = f"https://wago.tools/db2/ItemSparse/csv?build={build}&locale={locale_code}"
     print("Скачиваю:", url)
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (ItemLoc builder)"})
     with urllib.request.urlopen(req, timeout=180) as r:
@@ -42,24 +47,50 @@ def parse(text):
     return result
 
 
+def load_source(label, builds):
+    """Пробует сборки по очереди. Возвращает {язык: {id: название}}"""
+    for build in builds:
+        try:
+            data = {key: parse(download(build, code)) for key, code in LOCALES.items()}
+        except urllib.error.URLError as e:
+            print(f"  {label} {build}: не получилось ({e}), пробую следующую сборку")
+            continue
+        print(f"  {label} {build}: {len(data['en'])} предметов")
+        return data
+    sys.exit(f"Не удалось скачать данные {label}. Проверьте номера сборок на wago.tools/builds")
+
+
+def merge(primary, fallback):
+    """Данные primary главнее, пустые названия добираются из fallback."""
+    merged = {}
+    for key in LOCALES:
+        d = dict(fallback[key])
+        for item_id, name in primary[key].items():
+            if name or item_id not in d:
+                d[item_id] = name
+        merged[key] = d
+    return merged
+
+
 def lua_str(s):
     s = s.replace("\\", "\\\\").replace('"', '\\"').replace("\r", "").replace("\n", " ")
     return '"' + s + '"'
 
 
 def main():
-    names = {}
-    for key, code in LOCALES.items():
-        names[key] = parse(download(code))
-        print(f"  {key}: {len(names[key])} записей")
+    forever = load_source("Forever", FOREVER_BUILDS)
+    era = load_source("Classic Era", CLASSIC_ERA_BUILDS)
+    names = merge(forever, era)
+
+    only_era = len(set(era["en"]) - set(forever["en"]))
+    print(f"Из Classic Era добавлено предметов, которых нет в Forever: {only_era}")
 
     # Проверка: если язык не переключился, русские названия совпадут с английскими
-    if "ru" in names and "en" in names:
+    if "ru" in names:
         same = sum(1 for i, n in names["ru"].items() if n and n == names["en"].get(i))
-        total = max(1, len(names["ru"]))
-        if same / total > 0.8:
+        if same / max(1, len(names["ru"])) > 0.8:
             print("ВНИМАНИЕ: русские названия почти совпадают с английскими, "
-                  "похоже, wago.tools не переключил язык. Напишите об этом в чат.")
+                  "похоже, wago.tools не переключил язык.")
 
     keys = list(LOCALES.keys())
     ids = sorted(i for i, n in names["en"].items() if n)
@@ -77,4 +108,5 @@ def main():
     print(f"Готово: {len(ids)} предметов записано в {os.path.normpath(OUT)}")
 
 
-main()
+if __name__ == "__main__":
+    main()
