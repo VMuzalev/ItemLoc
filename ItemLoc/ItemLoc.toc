@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: ItemLoc
+## Notes: Поиск предметов по названию на любом языке (строгий и нестрогий режим)
+## Author: ВАШ_НИК
+## Version: 0.2.0
+## SavedVariables: ItemLocDB
+LocalizationData.lua
+ItemLoc.lua

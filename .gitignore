@@ -1,0 +1,6 @@
+# Генерируется скриптом tools/build_data.py, в репозиторий не кладём
+ItemLoc/LocalizationData.lua
+
+__pycache__/
+*.pyc
+*.zip
