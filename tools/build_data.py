@@ -48,7 +48,7 @@ def parse(text):
 
 
 def load_source(label, builds):
-    """Пробует сборки по очереди. Возвращает {язык: {id: название}}"""
+    """Пробует сборки по очереди. Возвращает ({язык: {id: название}}, номер сборки)"""
     for build in builds:
         try:
             data = {key: parse(download(build, code)) for key, code in LOCALES.items()}
@@ -56,7 +56,7 @@ def load_source(label, builds):
             print(f"  {label} {build}: не получилось ({e}), пробую следующую сборку")
             continue
         print(f"  {label} {build}: {len(data['en'])} предметов")
-        return data
+        return data, build
     sys.exit(f"Не удалось скачать данные {label}. Проверьте номера сборок на wago.tools/builds")
 
 
@@ -78,8 +78,8 @@ def lua_str(s):
 
 
 def main():
-    forever = load_source("Forever", FOREVER_BUILDS)
-    era = load_source("Classic Era", CLASSIC_ERA_BUILDS)
+    forever, forever_build = load_source("Forever", FOREVER_BUILDS)
+    era, _ = load_source("Classic Era", CLASSIC_ERA_BUILDS)
     names = merge(forever, era)
 
     only_era = len(set(era["en"]) - set(forever["en"]))
@@ -96,6 +96,7 @@ def main():
     ids = sorted(i for i, n in names["en"].items() if n)
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+        f.write(f"ItemLocDataBuild = {lua_str(forever_build)}\n")   # для проверки версии в аддоне
         f.write("ItemLocLocales = {" + ",".join(lua_str(k) for k in keys) + "}\n")
         f.write("ItemLocData = {\n")
         for item_id in ids:

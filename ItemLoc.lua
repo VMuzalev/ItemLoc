@@ -364,15 +364,55 @@ frame:SetScript("OnShow", function() edit:SetFocus() end)
 ---------------------------------------------------------------------------
 -- Загрузка настроек и команды
 ---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+-- Проверка версии клиента: сообщаем, если игра обновилась, а база старая
+---------------------------------------------------------------------------
+local function ClientBuild()
+    local _, build, _, toc = GetBuildInfo()
+    return tostring(build or "?"), toc
+end
+
+local function DataBuild()
+    return ItemLocDataBuild and tostring(ItemLocDataBuild):match("(%d+)$")
+end
+
+local function CheckClientBuild()
+    local client = ClientBuild()
+    if db.lastBuild == client then return end   -- об этой сборке уже сообщали
+    db.lastBuild = client
+    local data = DataBuild()
+    if data == client then return end
+    if data then
+        Print("клиент игры обновился (сборка " .. client .. "), а база названий собрана для сборки "
+            .. data .. ". Если какие-то предметы не находятся, обновите базу: python tools/build_data.py. "
+            .. "Подробности: /il info")
+    else
+        Print("в файле данных нет метки сборки. Пересоберите базу: python tools/build_data.py. "
+            .. "Подробности: /il info")
+    end
+end
+
+local function PrintInfo()
+    local client, toc = ClientBuild()
+    local count = 0
+    for _ in pairs(ItemLocData) do count = count + 1 end
+    Print("клиент: сборка " .. client .. ", Interface " .. tostring(toc))
+    Print("база: " .. count .. " предметов, собрана для сборки " .. (ItemLocDataBuild or "неизвестно"))
+end
+
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("ADDON_LOADED")
 loader:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function(_, event, arg1, arg2)
     if event == "ADDON_LOADED" then
         if arg1 ~= ADDON_NAME then return end
         ItemLocDB = ItemLocDB or { strict = false }
         db = ItemLocDB
         UpdateModeText()
+    elseif event == "PLAYER_LOGIN" then
+        -- небольшая пауза, чтобы сообщение не потерялось среди других при входе
+        if C_Timer and C_Timer.After then C_Timer.After(4, CheckClientBuild) else CheckClientBuild() end
     elseif event == "GET_ITEM_INFO_RECEIVED" then
         for i = 1, MAX_ROWS do
             local row = rows[i]
@@ -388,6 +428,7 @@ UpdateModeText()
 SLASH_ITEMLOC1 = "/il"
 SLASH_ITEMLOC2 = "/itemloc"
 SlashCmdList["ITEMLOC"] = function(msg)
+    if msg == "info" then PrintInfo() return end
     if msg and msg ~= "" then
         frame:Show()
         edit:SetText(msg)
