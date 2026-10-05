@@ -2,7 +2,7 @@
 ## Title: ItemLoc
 ## Notes: Поиск предметов по названию на любом языке (строгий и нестрогий режим)
 ## Author: VMuzalev
-## Version: 0.3.0
+## Version: 0.4.0
 ## SavedVariables: ItemLocDB
 LocalizationData.lua
 ItemLoc.lua

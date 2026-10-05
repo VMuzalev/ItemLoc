@@ -124,7 +124,7 @@ local MAX_ROWS = math.max(3, math.floor(400 / ROW_H))
 local FRAME_W = 560
 
 local frame = CreateFrame("Frame", "ItemLocFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-frame:SetSize(FRAME_W, 120 + MAX_ROWS * ROW_H)
+frame:SetSize(FRAME_W, 160 + MAX_ROWS * ROW_H)
 frame:SetPoint("CENTER")
 frame:SetFrameStrata("DIALOG")
 frame:SetBackdrop({
@@ -247,9 +247,33 @@ local function FillRow(row)
     return g.name ~= nil
 end
 
-local function ShowResults(results)
+---------------------------------------------------------------------------
+-- Постраничный просмотр
+---------------------------------------------------------------------------
+local currentResults, page = {}, 1
+
+local pageText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pageText:SetPoint("BOTTOM", 0, 24)
+pageText:SetWidth(140)
+
+local prevBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+prevBtn:SetSize(44, 22)
+prevBtn:SetPoint("RIGHT", pageText, "LEFT", -8, 0)
+prevBtn:SetText("<")
+
+local nextBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+nextBtn:SetSize(44, 22)
+nextBtn:SetPoint("LEFT", pageText, "RIGHT", 8, 0)
+nextBtn:SetText(">")
+
+local function ShowPage()
+    local total = #currentResults
+    local pages = math.max(1, math.ceil(total / MAX_ROWS))
+    page = math.min(math.max(page, 1), pages)
+    local first = (page - 1) * MAX_ROWS
+
     for i = 1, MAX_ROWS do
-        local row, r = rows[i], results[i]
+        local row, r = rows[i], currentResults[first + i]
         if r then
             row.id = r.id
             row.failed = false
@@ -264,14 +288,46 @@ local function ShowResults(results)
         end
     end
 
-    if #results == 0 then
+    if total == 0 then
+        pageText:SetText("")
         status:SetText("Ничего не найдено")
-    elseif #results > MAX_ROWS then
-        status:SetText("Найдено: " .. #results .. ". Показаны первые " .. MAX_ROWS .. ", уточните запрос")
     else
-        status:SetText("Найдено: " .. #results)
+        pageText:SetText("Стр. " .. page .. " из " .. pages)
+        status:SetText("Найдено: " .. total)
     end
+    if page > 1 then prevBtn:Enable() else prevBtn:Disable() end
+    if page < pages then nextBtn:Enable() else nextBtn:Disable() end
 end
+
+local function ShowResults(results)
+    currentResults = results
+    page = 1
+    ShowPage()
+end
+
+local function GoToPage(delta, toEdge)
+    local pages = math.max(1, math.ceil(#currentResults / MAX_ROWS))
+    if toEdge then
+        page = delta < 0 and 1 or pages
+    else
+        page = page + delta
+    end
+    ShowPage()
+end
+
+prevBtn:SetScript("OnClick", function() GoToPage(-1, IsShiftKeyDown()) end)
+nextBtn:SetScript("OnClick", function() GoToPage(1, IsShiftKeyDown()) end)
+for _, b in ipairs({ prevBtn, nextBtn }) do
+    b:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("Shift+клик: в начало / в конец", 1, 1, 1)
+        GameTooltip:AddLine("Также можно листать колесом мыши", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+frame:EnableMouseWheel(true)
+frame:SetScript("OnMouseWheel", function(_, delta) GoToPage(-delta) end)
 
 local function DoSearch()
     if ItemLocMissingData then
