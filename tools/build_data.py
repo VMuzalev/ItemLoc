@@ -19,7 +19,7 @@ BUILD = "1.60.1.70170"
 LOCALES = {"en": "enUS", "ru": "ruRU", "de": "deDE"}
 
 import os
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ItemLoc", "LocalizationData.lua")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "LocalizationData.lua")
 
 
 def download(locale_code):
