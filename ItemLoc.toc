@@ -5,5 +5,5 @@
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1729520
 ## SavedVariables: ItemLocDB
-LocalizationData.lua
+Build.lua
 ItemLoc.lua

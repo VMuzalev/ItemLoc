@@ -1,4 +1,8 @@
+# Генерируется скриптом tools/build_data.py, в репозиторий не коммитится
+Build.lua
+Modules/
 LocalizationData.lua
+
 __pycache__/
 *.pyc
 *.zip

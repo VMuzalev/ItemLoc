@@ -1,6 +1,21 @@
 # Настройки упаковки для BigWigsMods/packager (CurseForge и GitHub Releases)
 package-as: ItemLoc
 
+# Модули языков лежат внутри основного аддона, а в архиве должны быть отдельными папками
+# на одном уровне с ItemLoc (так их видит игра).
+move-folders:
+  ItemLoc/Modules/ItemLoc_enUS: ItemLoc_enUS
+  ItemLoc/Modules/ItemLoc_ruRU: ItemLoc_ruRU
+  ItemLoc/Modules/ItemLoc_deDE: ItemLoc_deDE
+  ItemLoc/Modules/ItemLoc_frFR: ItemLoc_frFR
+  ItemLoc/Modules/ItemLoc_esES: ItemLoc_esES
+  ItemLoc/Modules/ItemLoc_esMX: ItemLoc_esMX
+  ItemLoc/Modules/ItemLoc_itIT: ItemLoc_itIT
+  ItemLoc/Modules/ItemLoc_ptBR: ItemLoc_ptBR
+  ItemLoc/Modules/ItemLoc_koKR: ItemLoc_koKR
+  ItemLoc/Modules/ItemLoc_zhCN: ItemLoc_zhCN
+  ItemLoc/Modules/ItemLoc_zhTW: ItemLoc_zhTW
+
 # Эти файлы нужны только разработчику и в архив для игроков не попадают
 ignore:
   - tools

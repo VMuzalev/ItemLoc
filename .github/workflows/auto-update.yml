@@ -42,7 +42,7 @@ jobs:
         id: check
         run: |
           python tools/build_data.py
-          new_build=$(grep -oP '^ItemLocDataBuild = "\K[^"]+' LocalizationData.lua)
+          new_build=$(grep -oP '^ItemLocDataBuild = "\K[^"]+' Build.lua)
           old_build=$(cat data_build.txt 2>/dev/null || echo "0")
           echo "Сборка данных: было '$old_build', стало '$new_build'"
           changed=false
