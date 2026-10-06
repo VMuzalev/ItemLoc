@@ -1,0 +1,11 @@
+# Настройки упаковки для BigWigsMods/packager (CurseForge и GitHub Releases)
+package-as: ItemLoc
+
+# Эти файлы нужны только разработчику и в архив для игроков не попадают
+ignore:
+  - tools
+  - README.md
+  - data_build.txt
+  - .github
+  - .gitignore
+  - .gitattributes

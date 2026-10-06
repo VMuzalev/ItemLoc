@@ -1,0 +1,81 @@
+name: Auto update
+
+# Раз в сутки проверяет:
+#  1) не изменился ли номер Interface (обновляет ItemLoc.toc);
+#  2) не появилась ли на wago.tools новая сборка клиента Forever (пересобирает базу).
+# Если что-то изменилось, выпускает новую версию (тег vX.Y.Z) и запускает workflow Release.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: auto-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Обновить номер Interface в ItemLoc.toc
+        uses: p3lim/toc-interface-updater@v4
+        continue-on-error: true      # если определить номер не вышло, данные всё равно проверим
+        with:
+          flavor: |
+            forever
+
+      - name: Собрать базу и сравнить сборку
+        id: check
+        run: |
+          python tools/build_data.py
+          new_build=$(grep -oP '^ItemLocDataBuild = "\K[^"]+' LocalizationData.lua)
+          old_build=$(cat data_build.txt 2>/dev/null || echo "0")
+          echo "Сборка данных: было '$old_build', стало '$new_build'"
+          changed=false
+          if [ "$new_build" != "$old_build" ]; then
+            changed=true
+            echo "$new_build" > data_build.txt
+          fi
+          if ! git diff --quiet -- ItemLoc.toc; then
+            echo "Номер Interface изменился:"
+            git diff -- ItemLoc.toc
+            changed=true
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "new_build=$new_build" >> "$GITHUB_OUTPUT"
+
+      - name: Выпустить новую версию
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_BUILD: ${{ steps.check.outputs.new_build }}
+        run: |
+          last=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          last=${last:-v0.5.0}
+          IFS=. read -r major minor patch <<< "${last#v}"
+          next="v${major}.${minor}.$((patch + 1))"
+          echo "Новая версия: $next"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ItemLoc.toc data_build.txt
+          git commit -m "Автообновление: данные сборки ${NEW_BUILD}, Interface"
+          git tag "$next"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}" "$next"
+
+          # Тег, созданный стандартным токеном, не запускает Release сам, поэтому запускаем явно
+          gh workflow run release.yml --ref "$next"

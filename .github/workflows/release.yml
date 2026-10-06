@@ -1,0 +1,57 @@
+name: Release
+
+# Запускается, когда вы отправляете тег вида v0.6.0 (git tag v0.6.0 && git push origin v0.6.0),
+# а также вручную или из workflow "Auto update" (при ручном запуске выбирайте не ветку, а тег).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # нужны теги и история для номера версии и списка изменений
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Собрать базу названий (LocalizationData.lua)
+        run: python tools/build_data.py
+
+      - name: Пробная упаковка (без загрузки)
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -d
+
+      - name: Проверить содержимое архива
+        run: |
+          zip=$(ls .release/*.zip | head -n 1)
+          echo "Архив: $zip"
+          unzip -l "$zip"
+          unzip -l "$zip" | grep -q "ItemLoc/ItemLoc.toc" \
+            || { echo "::error::В архиве нет ItemLoc/ItemLoc.toc"; exit 1; }
+          unzip -l "$zip" | grep -q "ItemLoc/LocalizationData.lua" \
+            || { echo "::error::В архиве нет LocalizationData.lua, игрокам нечего будет искать"; exit 1; }
+          if unzip -l "$zip" | grep -q "ItemLoc/tools/"; then
+            echo "::error::Папка tools попала в архив"; exit 1
+          fi
+
+      - name: Очистить папку упаковки
+        run: rm -rf .release
+
+      - name: Опубликовать (CurseForge и GitHub Releases)
+        uses: BigWigsMods/packager@v2

@@ -384,11 +384,10 @@ local function CheckClientBuild()
     if data == client then return end
     if data then
         Print("клиент игры обновился (сборка " .. client .. "), а база названий собрана для сборки "
-            .. data .. ". Если какие-то предметы не находятся, обновите базу: python tools/build_data.py. "
-            .. "Подробности: /il info")
+            .. data .. ". Если какие-то предметы не находятся, обновите аддон (CurseForge или GitHub): "
+            .. "новая база выходит автоматически. Подробности: /il info")
     else
-        Print("в файле данных нет метки сборки. Пересоберите базу: python tools/build_data.py. "
-            .. "Подробности: /il info")
+        Print("в файле данных нет метки сборки. Обновите аддон до последней версии. Подробности: /il info")
     end
 end
 

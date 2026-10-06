@@ -24,6 +24,9 @@ CLASSIC_ERA_BUILDS = ["1.15.9.69722"]                  # продукт wow_clas
 # Ключ в аддоне -> код языка в wago.tools. Можно добавить: "fr": "frFR", "es": "esES"
 LOCALES = {"en": "enUS", "ru": "ruRU", "de": "deDE"}
 
+# Защита от испорченных данных: если предметов меньше, скрипт остановится и файл не будет записан.
+MIN_ITEMS = 10000
+
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "LocalizationData.lua")
 
 
@@ -89,11 +92,13 @@ def main():
     if "ru" in names:
         same = sum(1 for i, n in names["ru"].items() if n and n == names["en"].get(i))
         if same / max(1, len(names["ru"])) > 0.8:
-            print("ВНИМАНИЕ: русские названия почти совпадают с английскими, "
-                  "похоже, wago.tools не переключил язык.")
+            sys.exit("ОШИБКА: русские названия почти совпадают с английскими, "
+                     "похоже, wago.tools не переключил язык. Файл не записан.")
 
     keys = list(LOCALES.keys())
     ids = sorted(i for i, n in names["en"].items() if n)
+    if len(ids) < MIN_ITEMS:
+        sys.exit(f"ОШИБКА: найдено только {len(ids)} предметов (ожидается не меньше {MIN_ITEMS}). Файл не записан.")
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(f"ItemLocDataBuild = {lua_str(forever_build)}\n")   # для проверки версии в аддоне
