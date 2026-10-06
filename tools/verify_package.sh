@@ -23,7 +23,9 @@ done
 
 echo "$listing" | grep -qE "[[:space:]]ItemLoc/Modules/.*Data\.lua\$" \
   && err "Модули остались внутри ItemLoc/Modules и не вынесены на верхний уровень"
-echo "$listing" | grep -qE "[[:space:]]ItemLoc/tools/" && err "Папка tools попала в архив"
+for extra in tools tests docs .github; do
+  echo "$listing" | grep -qE "[[:space:]]ItemLoc/$extra/" && err "Папка $extra попала в архив"
+done
 
 if [ "$fail" -eq 0 ]; then
   echo "Архив в порядке: основной аддон и модулей языков: $count"

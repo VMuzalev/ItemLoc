@@ -1,0 +1,30 @@
+name: Предмет не находится или название неверное
+description: В игре предмет есть, а поиск его не находит, либо перевод неправильный
+labels: ["data"]
+body:
+  - type: input
+    id: item
+    attributes:
+      label: ID или название предмета
+      description: ID виден в строке результата или в ссылке на предмет. Если ID неизвестен, напишите название.
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: На каком языке искали и какие языки включены
+      placeholder: "искал по-русски, включены ruRU и deDE"
+    validations:
+      required: true
+  - type: textarea
+    id: info
+    attributes:
+      label: Вывод команды /il info
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Дополнительно
+      description: Например, откуда предмет (новый предмет Forever, старый предмет Classic и т.д.).

@@ -1,0 +1,34 @@
+name: Сообщить об ошибке
+description: Аддон работает неправильно или выдаёт ошибку
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что сообщаете! Чем подробнее описание, тем быстрее получится исправить.
+        Включить показ ошибок Lua можно командой `/console scriptErrors 1`.
+  - type: textarea
+    id: what
+    attributes:
+      label: Что произошло
+      description: Что вы делали, что ожидали увидеть и что увидели на самом деле.
+    validations:
+      required: true
+  - type: textarea
+    id: info
+    attributes:
+      label: Вывод команды /il info
+      description: Выполните `/il info` в игре и вставьте строки из чата. Так я вижу сборку клиента и состояние языков.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: lua
+    attributes:
+      label: Текст ошибки Lua (если она появлялась)
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Версия аддона и откуда установлен
+      placeholder: "0.6.0, CurseForge / GitHub Releases"

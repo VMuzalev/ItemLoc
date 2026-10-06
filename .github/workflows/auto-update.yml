@@ -2,12 +2,18 @@ name: Auto update
 
 # Раз в сутки проверяет:
 #  1) не изменился ли номер Interface (обновляет ItemLoc.toc);
-#  2) не появилась ли на wago.tools новая сборка клиента Forever (пересобирает базу).
+#  2) не появилась ли новая сборка клиента Forever (ищется автоматически на wago.tools и сервере Blizzard).
 # Если что-то изменилось, выпускает новую версию (тег vX.Y.Z) и запускает workflow Release.
+# Данные собирает и публикует Release, а сборку в data_build.txt он записывает после успешного выпуска.
 on:
   schedule:
     - cron: "17 6 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Выпустить версию, даже если ничего не изменилось"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,6 +26,8 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Получить код
         uses: actions/checkout@v4
@@ -33,36 +41,29 @@ jobs:
 
       - name: Обновить номер Interface в ItemLoc.toc
         uses: p3lim/toc-interface-updater@v4
-        continue-on-error: true      # если определить номер не вышло, данные всё равно проверим
+        continue-on-error: true      # если определить номер не вышло, сборку данных всё равно проверим
         with:
           flavor: |
             forever
 
-      - name: Собрать базу и сравнить сборку
-        id: check
+      - name: Определить новейшую сборку Forever
+        id: build
         run: |
-          python tools/build_data.py
-          new_build=$(grep -oP '^ItemLocDataBuild = "\K[^"]+' Build.lua)
-          old_build=$(cat data_build.txt 2>/dev/null || echo "0")
-          echo "Сборка данных: было '$old_build', стало '$new_build'"
-          changed=false
-          if [ "$new_build" != "$old_build" ]; then
-            changed=true
-            echo "$new_build" > data_build.txt
-          fi
-          if ! git diff --quiet -- ItemLoc.toc; then
-            echo "Номер Interface изменился:"
-            git diff -- ItemLoc.toc
-            changed=true
-          fi
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          new_build=$(python tools/build_data.py --check)
+          echo "Новейшая сборка: $new_build"
           echo "new_build=$new_build" >> "$GITHUB_OUTPUT"
 
-      - name: Выпустить новую версию
-        if: steps.check.outputs.changed == 'true'
+      - name: Решить, нужен ли выпуск
+        id: decide
         env:
-          GH_TOKEN: ${{ github.token }}
-          NEW_BUILD: ${{ steps.check.outputs.new_build }}
+          NEW_BUILD: ${{ steps.build.outputs.new_build }}
+          FORCE: ${{ inputs.force }}
+        run: bash tools/decide_release.sh
+
+      - name: Выпустить новую версию
+        if: steps.decide.outputs.changed == 'true'
+        env:
+          NEW_BUILD: ${{ steps.build.outputs.new_build }}
         run: |
           last=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
           last=${last:-v0.5.0}
@@ -72,10 +73,18 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ItemLoc.toc data_build.txt
-          git commit -m "Автообновление: данные сборки ${NEW_BUILD}, Interface"
-          git tag "$next"
+          if ! git diff --quiet -- ItemLoc.toc; then
+            git add ItemLoc.toc
+            git commit -m "Автообновление: номер Interface"
+          fi
+          git tag -a "$next" -m "Автообновление: данные сборки ${NEW_BUILD}"
           git push origin "HEAD:${{ github.event.repository.default_branch }}" "$next"
 
           # Тег, созданный стандартным токеном, не запускает Release сам, поэтому запускаем явно
           gh workflow run release.yml --ref "$next"
+
+      - name: Не дать GitHub отключить расписание
+        # GitHub отключает запланированные запуски после 60 дней без активности в репозитории.
+        # Это запасная мера, на неё нельзя полностью полагаться: иногда заглядывайте во вкладку Actions.
+        if: always()
+        run: gh workflow enable auto-update.yml || true

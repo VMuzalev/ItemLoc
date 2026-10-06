@@ -19,6 +19,8 @@ move-folders:
 # Эти файлы нужны только разработчику и в архив для игроков не попадают
 ignore:
   - tools
+  - tests
+  - docs
   - README.md
   - data_build.txt
   - .github

@@ -32,6 +32,11 @@ jobs:
       - name: Проверить список языков
         run: python tools/check_locales.py
 
+      - name: Запустить тесты
+        run: |
+          pip install lupa
+          python -m unittest discover -s tests
+
       - name: Собрать базу названий (Build.lua и модули языков)
         run: python tools/build_data.py
 
@@ -60,3 +65,22 @@ jobs:
 
       - name: Опубликовать (CurseForge и GitHub Releases)
         uses: BigWigsMods/packager@v2
+
+      - name: Запомнить выпущенную сборку данных
+        # Только после успешной публикации: если выпуск упал, Auto update попробует снова.
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build=$(grep -oP '^ItemLocDataBuild = "\K[^"]+' Build.lua)
+          api="repos/${GITHUB_REPOSITORY}/contents/data_build.txt"
+          current=$(gh api "$api" --jq '.content' | base64 -d | tr -d '[:space:]' || true)
+          if [ "$build" = "$current" ]; then
+            echo "data_build.txt уже содержит $build"
+            exit 0
+          fi
+          sha=$(gh api "$api" --jq '.sha')
+          gh api -X PUT "$api" \
+            -f message="Выпущена версия ${GITHUB_REF_NAME}: данные сборки ${build}" \
+            -f content="$(printf '%s\n' "$build" | base64 -w0)" \
+            -f sha="$sha"

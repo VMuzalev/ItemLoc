@@ -7,6 +7,7 @@ build_data.py - собирает данные для аддона ItemLoc.
      хотя в игре они есть. Названия таких предметов берутся из Classic Era.
 
 Запуск:    python tools/build_data.py
+           python tools/build_data.py --check   (только определить новейшую сборку, ничего не писать)
 Результат:
   Build.lua                           метка сборки (читается основным аддоном)
   Modules/ItemLoc_<локаль>/           по одному модулю на язык (загружаются по требованию)
@@ -14,9 +15,11 @@ build_data.py - собирает данные для аддона ItemLoc.
 Если репозиторий лежит прямо в Interface\\AddOns\\ItemLoc, модули дополнительно копируются
 в Interface\\AddOns\\ItemLoc_<локаль>, чтобы игра их увидела (как в готовом архиве).
 """
+import contextlib
 import csv
 import io
 import os
+import re
 import shutil
 import sys
 import time
@@ -27,6 +30,15 @@ import urllib.request
 # Актуальные номера: https://wago.tools/builds
 FOREVER_BUILDS = ["1.60.1.70205", "1.60.1.70170"]      # продукт wow_classic_beta
 CLASSIC_ERA_BUILDS = ["1.15.9.69722"]                  # продукт wow_classic_era
+
+# Новые сборки Forever ищутся автоматически (см. discover_forever_builds), а список выше служит
+# запасным вариантом. Если после запуска игры номер версии изменится (например, 1.61.x), добавьте префикс.
+FOREVER_VERSION_PREFIXES = ("1.60.",)
+# Где искать номера сборок: страница wago.tools и сервер версий Blizzard (продукт беты Forever).
+DISCOVERY_URLS = (
+    "https://wago.tools/builds",
+    "https://us.version.battle.net/v2/products/wow_classic_beta/versions",
+)
 
 # Локаль WoW (она же код языка в wago.tools) -> подпись для списка аддонов.
 # Список должен совпадать с move-folders в .pkgmeta и с LOCALES в ItemLoc.lua.
@@ -53,6 +65,41 @@ MIN_ITEMS = 10000
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 MODULES_DIR = os.path.join(ROOT, "Modules")
 CHUNK = 4000   # записей в одном блоке (у Lua есть лимит на число констант в функции)
+
+
+# ---------------------------------------------------------------- поиск сборок
+
+def _fetch_text(url, timeout=60):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (ItemLoc builder)"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode("utf-8", errors="replace")
+
+
+def extract_forever_versions(text):
+    """Достаёт из произвольного текста номера сборок Forever вида 1.60.1.70205, самые новые первыми."""
+    prefixes = "|".join(re.escape(p) for p in FOREVER_VERSION_PREFIXES)
+    found = set(re.findall(rf"(?<![\d.])(?:{prefixes})\d+\.\d{{5,6}}(?![\d.])", text))
+    return sorted(found, key=lambda v: tuple(int(x) for x in v.split(".")), reverse=True)
+
+
+def discover_forever_builds():
+    """Ищет номера сборок Forever на wago.tools и сервере Blizzard. Любые сбои не критичны: вернётся []."""
+    found = set()
+    for url in DISCOVERY_URLS:
+        try:
+            versions = extract_forever_versions(_fetch_text(url))
+        except Exception as e:  # сеть, формат страницы и т.д.: это только подсказка
+            print(f"  Поиск сборок: {url} недоступен ({e})")
+            continue
+        print(f"  Поиск сборок: {url}: найдено {len(versions)}")
+        found.update(versions)
+    return sorted(found, key=lambda v: tuple(int(x) for x in v.split(".")), reverse=True)
+
+
+def forever_build_candidates():
+    """Сначала найденные автоматически (новые первыми), затем запасной список."""
+    discovered = discover_forever_builds()[:3]
+    return discovered + [b for b in FOREVER_BUILDS if b not in discovered]
 
 
 # ---------------------------------------------------------------- загрузка
@@ -220,8 +267,28 @@ def copy_to_addons(locales):
     print(f"Модули скопированы в {addons}")
 
 
+def check_latest_build():
+    """Определяет самую новую сборку Forever, для которой на wago.tools есть таблица предметов.
+    Скачивает только один небольшой файл. Ничего не записывает. Печатает номер сборки."""
+    with contextlib.redirect_stdout(sys.stderr):   # журнал в stderr, чтобы stdout содержал только номер
+        for build in forever_build_candidates():
+            try:
+                parse(download(build, "enUS"))
+            except urllib.error.URLError as e:
+                print(f"  {build}: не получилось ({e}), пробую следующую")
+                continue
+            print(f"  Новейшая доступная сборка: {build}")
+            break
+        else:
+            sys.exit("Не удалось определить сборку Forever")
+    print(build)
+
+
 def main():
-    forever, forever_build = load_source("Forever", FOREVER_BUILDS)
+    if "--check" in sys.argv:
+        check_latest_build()
+        return
+    forever, forever_build = load_source("Forever", forever_build_candidates())
     era, _ = load_source("Classic Era", CLASSIC_ERA_BUILDS)
     names_by_locale = validate(merge(forever, era))
 
