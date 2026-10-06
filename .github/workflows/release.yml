@@ -32,6 +32,14 @@ jobs:
       - name: Собрать базу названий (LocalizationData.lua)
         run: python tools/build_data.py
 
+      - name: Добавить базу в индекс Git
+        # Файл в .gitignore, а упаковщик такие файлы пропускает.
+        # Добавление в индекс (без коммита) делает файл видимым для упаковщика
+        # и не сдвигает тег, по которому определяется версия.
+        run: |
+          git add -f LocalizationData.lua
+          git status --short
+
       - name: Пробная упаковка (без загрузки)
         uses: BigWigsMods/packager@v2
         with:
