@@ -233,6 +233,7 @@ def write_module(loc, label, names, interface):
         f.write(f"## Notes: Названия предметов для ItemLoc, язык {loc}. Загружается по требованию.\n")
         f.write("## LoadOnDemand: 1\n")
         f.write("## Dependencies: ItemLoc\n")
+        f.write("## Group: ItemLoc\n")   # в списке аддонов модули сворачиваются под основным (клиент 11.1.0+)
         f.write("## Version: @project-version@\n")
         f.write("Data.lua\n")
 

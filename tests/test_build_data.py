@@ -106,6 +106,7 @@ class FullBuild(unittest.TestCase):
             self.assertIn("## Interface: 16002", toc)        # берётся из основного ItemLoc.toc
             self.assertIn("## LoadOnDemand: 1", toc)
             self.assertIn("## Dependencies: ItemLoc", toc)
+            self.assertIn("## Group: ItemLoc", toc)          # группировка в списке аддонов
 
     def test_data_files_load_in_lua51_across_chunks(self):
         # 9000 предметов = 3 блока по 4000: проверяем, что разбиение на блоки не теряет записи

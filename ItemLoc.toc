@@ -3,6 +3,7 @@
 ## Notes: Поиск предметов по названию на любом языке (строгий и нестрогий режим)
 ## Author: VMuzalev
 ## Version: @project-version@
+## Group: ItemLoc
 ## X-Curse-Project-ID: 1729520
 ## SavedVariables: ItemLocDB
 Build.lua
