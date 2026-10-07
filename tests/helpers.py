@@ -82,6 +82,8 @@ local function stub()
     if k == "id" or k == "failed" or k == "link" or k:sub(1, 1) == "_" then return nil end
     if k == "GetText" then return function(self) return self._text or "" end end
     if k == "SetText" then return function(self, v) self._text = v end end
+    if k == "SetAlpha" then return function(self, v) self._alpha = v end end
+    if k == "SetDesaturated" then return function(self, v) self._desat = v end end
     if k == "SetChecked" then return function(self, v) self._checked = v end end
     if k == "GetChecked" then return function(self) return self._checked end end
     if k == "SetScript" then return function(self, n, f) self._scripts[n] = f end end
@@ -113,6 +115,12 @@ C_AddOns = { LoadAddOn = function(name)
     assert(loadstring(src, name))()
     return true
 end }
+Minimap = stub()
+Minimap.GetWidth = function() return 140 end
+Minimap.GetCenter = function() return 100, 100 end
+Minimap.GetEffectiveScale = function() return 1 end
+GetCursorPosition = function() return 100, 200 end
+AddonCompartmentFrame = { RegisterAddon = function(self, info) COMPARTMENT = info end }
 Settings = {
     RegisterCanvasLayoutCategory = function(panel, name) return { GetID = function() return 42 end } end,
     RegisterAddOnCategory = function(c) REGISTERED = c end,
@@ -126,9 +134,10 @@ EXPOSE = [
     ("local edit = CreateFrame", "edit = CreateFrame"), ("local status = frame", "status = frame"),
     ("local pageText = frame", "pageText = frame"), ("local checks, statuses = {}, {}", "checks, statuses = {}, {}"),
     ("local rowH, perPage", "rowH, perPage"), ("local function Search", "function Search"),
-    ("local function normalize", "function normalize"), ("local function DoSearch", "function DoSearch"),
+    ("local function normalize", "function normalize"), ("local DoSearch ", "DoSearch = nil -- "),
     ("local db = ", "db = "), ("local panel = CreateFrame", "panel = CreateFrame"),
-    ("local prevBtn", "prevBtn"), ("local nextBtn", "nextBtn"),
+    ("local prevBtn", "prevBtn"), ("local nextBtn", "nextBtn"), ("local minimapBtn\n", "minimapBtn = nil\n"),
+    ("local favBtn", "favBtn"), ("local viewFav", "viewFav"),
 ]
 
 

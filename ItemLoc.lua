@@ -20,8 +20,114 @@ local LOCALES = {
     { "zhTW", "Chinese (Traditional)" },
 }
 
-local db = { strict = false, langs = {} }   -- при входе в игру заменится на сохранённые настройки
-local loadReason = {}                        -- локаль -> почему модуль не загрузился
+-- Настройки (при входе в игру заменятся на сохранённые)
+local db = { strict = false, langs = {}, favorites = {} }
+local loadReason = {}   -- локаль -> почему модуль не загрузился
+
+---------------------------------------------------------------------------
+-- Тексты интерфейса: русский и английский (по языку клиента, остальные клиенты видят английский)
+---------------------------------------------------------------------------
+local STRINGS = {
+    enUS = {
+        title = "ItemLoc: item search",
+        find = "Search",
+        mode_strict = "Mode: strict", mode_loose = "Mode: loose",
+        mode_tip = "Search mode",
+        mode_tip_strict = "Strict: the name must match completely (in any enabled language).",
+        mode_tip_loose = "Loose: part of a name, or all words in any order.",
+        languages = "Languages...",
+        favorites = "Favorites (%d)", fav_back = "Back to search",
+        fav_tip = "Show only the items you marked with a star.",
+        fav_add = "Add to favorites", fav_remove = "Remove from favorites",
+        fav_empty = "No favorites yet. Click the star next to an item in the search results.",
+        found = "Found: %d", nothing = "Nothing found", enter_query = "Enter an item name",
+        missing_langs = "No data: %s",
+        no_english = "Module ItemLoc_enUS not found. Reinstall the addon: all ItemLoc* folders are required.",
+        page = "Page %d of %d",
+        pager_tip1 = "Shift+click: first / last page", pager_tip2 = "You can also scroll with the mouse wheel",
+        link_hint = "Shift+click: insert link into chat",
+        loading = "loading item data...", unknown_item = "unknown to the game client (no data)",
+        req_level = "req. level %d",
+        opt_title = "ItemLoc: search languages",
+        opt_help = "English is always used. Tick additional languages: data is loaded only for the selected "
+            .. "languages, the first time the search window is opened. If you untick a language it is no "
+            .. "longer searched, and its memory is freed after /reload.",
+        st_loaded = "loaded", st_loaded_until = "loaded until /reload", st_empty = "no data for this game version",
+        st_missing = "not found: folder ItemLoc_%s",
+        opt_minimap = "Show the minimap button",
+        mm_tip_title = "ItemLoc", mm_left = "Left-click: open / close", mm_right = "Right-click: language settings",
+        mm_drag = "Drag: move the button",
+        binding = "Open / close the ItemLoc window",
+        notice_updated = "the game client was updated (build %s), but the name database was built for build %s. "
+            .. "If some items are not found, update the addon (CurseForge or GitHub): a new database is published "
+            .. "automatically. Details: /il info",
+        notice_nomarker = "the addon has no database build marker. Update the addon to the latest version. Details: /il info",
+        info_client = "client: build %s, Interface %s", info_db = "database built for build %s", unknown = "unknown",
+        info_names = "%s: %d names", info_nodata = "%s: no data for this game version",
+        info_notloaded = "%s: module not loaded (%s)", info_nofolder = "no folder ItemLoc_%s",
+        no_options = "settings are not available in this client version",
+        minimap_on = "minimap button shown", minimap_off = "minimap button hidden",
+        welcome = "installed. Open the window with /il or the minimap button. Languages: /il lang. Help: /il help",
+        help_title = "commands:",
+        help_1 = "/il - open or close the window", help_2 = "/il <name> - search right away",
+        help_3 = "/il lang - choose search languages", help_4 = "/il minimap - show or hide the minimap button",
+        help_5 = "/il info - client build, database build and language status",
+        help_6 = "In the window: Enter = search, star = favorite, Shift+click = link in chat, mouse wheel = pages.",
+    },
+    ruRU = {
+        title = "ItemLoc: поиск предметов",
+        find = "Найти",
+        mode_strict = "Режим: строгий", mode_loose = "Режим: нестрогий",
+        mode_tip = "Режим поиска",
+        mode_tip_strict = "Строгий: название должно совпасть полностью (на любом включённом языке).",
+        mode_tip_loose = "Нестрогий: часть названия или слова в любом порядке.",
+        languages = "Языки...",
+        favorites = "Избранное (%d)", fav_back = "Назад к поиску",
+        fav_tip = "Показать только предметы, отмеченные звёздочкой.",
+        fav_add = "В избранное", fav_remove = "Убрать из избранного",
+        fav_empty = "Избранное пусто. Нажмите на звёздочку у предмета в результатах поиска.",
+        found = "Найдено: %d", nothing = "Ничего не найдено", enter_query = "Введите название предмета",
+        missing_langs = "Нет данных: %s",
+        no_english = "Не найден модуль ItemLoc_enUS. Переустановите аддон: нужны все папки ItemLoc*.",
+        page = "Стр. %d из %d",
+        pager_tip1 = "Shift+клик: в начало / в конец", pager_tip2 = "Также можно листать колесом мыши",
+        link_hint = "Shift+клик: вставить ссылку в чат",
+        loading = "загрузка данных из игры...", unknown_item = "игра не знает этот предмет (нет данных в клиенте)",
+        req_level = "треб. ур. %d",
+        opt_title = "ItemLoc: языки поиска",
+        opt_help = "Английский используется всегда. Отметьте дополнительные языки: данные загружаются только "
+            .. "для выбранных языков, при первом открытии окна поиска. Если снять галочку, язык перестанет "
+            .. "участвовать в поиске, а память освободится после /reload.",
+        st_loaded = "загружен", st_loaded_until = "загружен до /reload", st_empty = "нет данных для этой версии игры",
+        st_missing = "не найден: папка ItemLoc_%s",
+        opt_minimap = "Показывать кнопку у миникарты",
+        mm_tip_title = "ItemLoc", mm_left = "Левый клик: открыть / закрыть", mm_right = "Правый клик: языки поиска",
+        mm_drag = "Перетаскивание: переместить кнопку",
+        binding = "Открыть / закрыть окно ItemLoc",
+        notice_updated = "клиент игры обновился (сборка %s), а база названий собрана для сборки %s. "
+            .. "Если какие-то предметы не находятся, обновите аддон (CurseForge или GitHub): "
+            .. "новая база выходит автоматически. Подробности: /il info",
+        notice_nomarker = "в аддоне нет метки сборки базы. Обновите аддон до последней версии. Подробности: /il info",
+        info_client = "клиент: сборка %s, Interface %s", info_db = "база собрана для сборки %s", unknown = "неизвестно",
+        info_names = "%s: %d названий", info_nodata = "%s: нет данных для этой версии игры",
+        info_notloaded = "%s: модуль не загружен (%s)", info_nofolder = "нет папки ItemLoc_%s",
+        no_options = "настройки недоступны в этой версии клиента",
+        minimap_on = "кнопка у миникарты показана", minimap_off = "кнопка у миникарты скрыта",
+        welcome = "установлен. Откройте окно командой /il или кнопкой у миникарты. Языки: /il lang. Справка: /il help",
+        help_title = "команды:",
+        help_1 = "/il - открыть или закрыть окно", help_2 = "/il <название> - сразу выполнить поиск",
+        help_3 = "/il lang - выбрать языки поиска", help_4 = "/il minimap - показать или скрыть кнопку у миникарты",
+        help_5 = "/il info - сборка клиента, сборка базы и состояние языков",
+        help_6 = "В окне: Enter = поиск, звёздочка = избранное, Shift+клик = ссылка в чат, колесо мыши = страницы.",
+    },
+}
+local CURRENT = STRINGS[GetLocale()] or STRINGS.enUS
+
+local function T(key, ...)
+    local s = CURRENT[key] or STRINGS.enUS[key] or key
+    if select("#", ...) > 0 then return s:format(...) end
+    return s
+end
 
 ---------------------------------------------------------------------------
 -- Вспомогательные функции
@@ -134,6 +240,7 @@ local GetInfo        = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 local GetInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
 local RequestLoad    = C_Item and C_Item.RequestLoadItemDataByID
 local QUESTION_ICON  = 134400
+local atan2 = math.atan2 or function(y, x) return math.atan(y, x) end
 
 local function QualityHex(q)
     local c = q and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[q]
@@ -165,11 +272,12 @@ end
 -- Окно
 ---------------------------------------------------------------------------
 local FRAME_W = 560
-local BODY_H = 380        -- высота области результатов
+local BODY_H = 360        -- высота области результатов
 local ROWS_COUNT = 7      -- сколько строк создано; сколько показано, зависит от числа языков
+local FAVORITE_ICON = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"   -- жёлтая звезда
 
 local frame = CreateFrame("Frame", "ItemLocFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-frame:SetSize(FRAME_W, 160 + BODY_H)
+frame:SetSize(FRAME_W, 110 + BODY_H + 80)
 frame:SetPoint("CENTER")
 frame:SetFrameStrata("DIALOG")
 frame:SetBackdrop({
@@ -188,7 +296,7 @@ tinsert(UISpecialFrames, "ItemLocFrame")   -- закрытие по Esc
 
 local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", 0, -18)
-title:SetText("ItemLoc: поиск предметов")
+title:SetText(T("title"))
 
 local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 closeBtn:SetPoint("TOPRIGHT", -6, -6)
@@ -202,24 +310,29 @@ edit:SetMaxLetters(120)
 local searchBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 searchBtn:SetSize(90, 24)
 searchBtn:SetPoint("LEFT", edit, "RIGHT", 10, 0)
-searchBtn:SetText("Найти")
+searchBtn:SetText(T("find"))
 
 local modeBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-modeBtn:SetSize(170, 24)
+modeBtn:SetSize(150, 24)
 modeBtn:SetPoint("TOPLEFT", 24, -78)
 
 local langBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-langBtn:SetSize(100, 24)
-langBtn:SetPoint("LEFT", modeBtn, "RIGHT", 8, 0)
-langBtn:SetText("Языки...")
+langBtn:SetSize(95, 24)
+langBtn:SetPoint("LEFT", modeBtn, "RIGHT", 6, 0)
+langBtn:SetText(T("languages"))
 
+local favBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+favBtn:SetSize(150, 24)
+favBtn:SetPoint("LEFT", langBtn, "RIGHT", 6, 0)
+
+-- Строка состояния внизу, над переключателем страниц
 local status = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-status:SetPoint("LEFT", langBtn, "RIGHT", 12, 0)
-status:SetWidth(FRAME_W - 24 - 170 - 8 - 100 - 12 - 28)
-status:SetJustifyH("LEFT")
+status:SetPoint("BOTTOM", 0, 50)
+status:SetWidth(FRAME_W - 48)
+status:SetJustifyH("CENTER")
 
 local function UpdateModeText()
-    modeBtn:SetText(db.strict and "Режим: строгий" or "Режим: нестрогий")
+    modeBtn:SetText(db.strict and T("mode_strict") or T("mode_loose"))
 end
 
 -- Строки результатов (высота и положение задаются в Layout)
@@ -233,15 +346,24 @@ for i = 1, ROWS_COUNT do
     row.icon:SetPoint("TOPLEFT", 6, -6)
     row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.text:SetPoint("TOPLEFT", 54, -6)
-    row.text:SetWidth(FRAME_W - 48 - 64)
+    row.text:SetWidth(FRAME_W - 48 - 64 - 24)
     row.text:SetJustifyH("LEFT")
     row.text:SetWordWrap(false)
+
+    -- Звёздочка избранного
+    row.star = CreateFrame("Button", nil, row)
+    row.star:SetSize(18, 18)
+    row.star:SetPoint("TOPRIGHT", -6, -6)
+    row.star.tex = row.star:CreateTexture(nil, "ARTWORK")
+    row.star.tex:SetAllPoints()
+    row.star.tex:SetTexture(FAVORITE_ICON)
+
     row:SetScript("OnEnter", function(self)
         if not self.id then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         pcall(GameTooltip.SetHyperlink, GameTooltip, "item:" .. self.id)
         if self.link then
-            GameTooltip:AddLine("Shift+клик: вставить ссылку в чат", 0.6, 0.6, 0.6)
+            GameTooltip:AddLine(T("link_hint"), 0.6, 0.6, 0.6)
         end
         GameTooltip:Show()
     end)
@@ -254,7 +376,7 @@ for i = 1, ROWS_COUNT do
 end
 
 -- Высота строки зависит от числа включённых языков, от неё зависит число строк на странице
-local rowH, perPage = 56, 6
+local rowH, perPage = 56, 5
 local function Layout()
     local n = #ActiveLocales()
     rowH = math.max(56, (n + 2) * 13 + 10)
@@ -268,10 +390,53 @@ local function Layout()
 end
 
 ---------------------------------------------------------------------------
+-- Избранное
+---------------------------------------------------------------------------
+local viewFav = false   -- показан список избранного вместо результатов поиска
+local DoSearch          -- объявлена ниже
+
+local function FavoriteCount()
+    local n = 0
+    for _ in pairs(db.favorites) do n = n + 1 end
+    return n
+end
+
+local function UpdateFavBtn()
+    favBtn:SetText(viewFav and T("fav_back") or T("favorites", FavoriteCount()))
+end
+
+local function UpdateStar(row)
+    local on = row.id and db.favorites[row.id]
+    row.star.tex:SetDesaturated(not on)
+    row.star.tex:SetAlpha(on and 1 or 0.4)
+end
+
+-- Список избранного: все отмеченные предметы или только подходящие под запрос
+local function FavoriteList(query)
+    local out = {}
+    if query ~= "" then
+        for _, r in ipairs(Search(query, db.strict)) do
+            if db.favorites[r.id] then out[#out + 1] = r end
+        end
+        return out
+    end
+    for id in pairs(db.favorites) do out[#out + 1] = { id = id, score = 0 } end
+    local en = ItemLocData.enUS
+    table.sort(out, function(a, b)
+        local na = en and en.l[a.id] or ""
+        local nb = en and en.l[b.id] or ""
+        if na ~= nb then return na < nb end
+        return a.id < b.id
+    end)
+    return out
+end
+
+---------------------------------------------------------------------------
 -- Постраничный просмотр
 ---------------------------------------------------------------------------
 local currentResults, page = {}, 1
-local statusExtra = ""   -- дописывается к строке состояния (например, нет данных для языка)
+local statusExtra = ""             -- дописывается к строке состояния (например, нет данных для языка)
+local emptyText = T("nothing")     -- что писать, когда результатов нет
 
 local pageText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 pageText:SetPoint("BOTTOM", 0, 24)
@@ -303,6 +468,7 @@ local function FillRow(row)
 
     row.icon:SetTexture(g.icon or QUESTION_ICON)
     row.link = g.link
+    UpdateStar(row)
 
     local title = g.name and (QualityHex(g.quality) .. g.name .. "|r") or (names[1] and names[1][2]) or ""
     local lines = { title .. "  |cff888888ID " .. id .. "|r" }
@@ -314,12 +480,12 @@ local function FillRow(row)
         local slot = g.equipLoc and g.equipLoc ~= "" and _G[g.equipLoc]
         if slot then meta[#meta + 1] = slot end
         if g.ilvl and g.ilvl > 0 then meta[#meta + 1] = "iLvl " .. g.ilvl end
-        if g.minLevel and g.minLevel > 0 then meta[#meta + 1] = "треб. ур. " .. g.minLevel end
+        if g.minLevel and g.minLevel > 0 then meta[#meta + 1] = T("req_level", g.minLevel) end
         lines[2] = "|cffbbbbbb" .. table.concat(meta, ", ") .. "|r"
     elseif row.failed then
-        lines[2] = "|cffff8080игра не знает этот предмет (нет данных в клиенте)|r"
+        lines[2] = "|cffff8080" .. T("unknown_item") .. "|r"
     else
-        lines[2] = "|cff888888загрузка данных из игры...|r"
+        lines[2] = "|cff888888" .. T("loading") .. "|r"
     end
 
     for _, pair in ipairs(names) do
@@ -355,13 +521,14 @@ local function ShowPage()
 
     if total == 0 then
         pageText:SetText("")
-        status:SetText("Ничего не найдено" .. statusExtra)
+        status:SetText(emptyText .. statusExtra)
     else
-        pageText:SetText("Стр. " .. page .. " из " .. pages)
-        status:SetText("Найдено: " .. total .. statusExtra)
+        pageText:SetText(T("page", page, pages))
+        status:SetText(T("found", total) .. statusExtra)
     end
     if page > 1 then prevBtn:Enable() else prevBtn:Disable() end
     if page < pages then nextBtn:Enable() else nextBtn:Disable() end
+    UpdateFavBtn()
 end
 
 local function ShowResults(results)
@@ -385,8 +552,8 @@ nextBtn:SetScript("OnClick", function() GoToPage(1, IsShiftKeyDown()) end)
 for _, b in ipairs({ prevBtn, nextBtn }) do
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine("Shift+клик: в начало / в конец", 1, 1, 1)
-        GameTooltip:AddLine("Также можно листать колесом мыши", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(T("pager_tip1"), 1, 1, 1)
+        GameTooltip:AddLine(T("pager_tip2"), 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -397,25 +564,58 @@ frame:SetScript("OnMouseWheel", function(_, delta) GoToPage(-delta) end)
 ---------------------------------------------------------------------------
 -- Поиск из окна
 ---------------------------------------------------------------------------
-local function DoSearch()
+DoSearch = function()
     local missing = EnsureActive()
     statusExtra = ""
+    emptyText = T("nothing")
     if not ItemLocData.enUS then
         ShowResults({})
-        status:SetText("|cffff8080Не найден модуль ItemLoc_enUS. Переустановите аддон: нужны все папки ItemLoc*|r")
+        status:SetText("|cffff8080" .. T("no_english") .. "|r")
         return
     end
     if #missing > 0 then
-        statusExtra = "  |cffff8080Нет данных: " .. table.concat(missing, ", ") .. "|r"
+        statusExtra = "  |cffff8080" .. T("missing_langs", table.concat(missing, ", ")) .. "|r"
     end
 
     local q = normalize(edit:GetText())
+    if viewFav then
+        if FavoriteCount() == 0 then emptyText = T("fav_empty") end
+        ShowResults(FavoriteList(q))
+        return
+    end
     if q == "" then
+        emptyText = T("enter_query")
         ShowResults({})
-        status:SetText("Введите название предмета" .. statusExtra)
         return
     end
     ShowResults(Search(q, db.strict))
+end
+
+local function SetFavorite(id, on)
+    db.favorites[id] = on and true or nil
+    if viewFav and not on then
+        local keep = page
+        DoSearch()           -- убрали предмет из списка избранного: обновить список, оставшись на странице
+        page = keep
+        ShowPage()
+    else
+        UpdateFavBtn()
+        for i = 1, ROWS_COUNT do
+            if rows[i].id == id then UpdateStar(rows[i]) end
+        end
+    end
+end
+
+for _, row in ipairs(rows) do
+    row.star:SetScript("OnClick", function()
+        if row.id then SetFavorite(row.id, not db.favorites[row.id]) end
+    end)
+    row.star:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(row.id and db.favorites[row.id] and T("fav_remove") or T("fav_add"), 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    row.star:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
 edit:SetScript("OnEnterPressed", DoSearch)
@@ -428,40 +628,55 @@ modeBtn:SetScript("OnClick", function()
 end)
 modeBtn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine("Режим поиска", 1, 1, 1)
-    GameTooltip:AddLine("Строгий: название должно совпасть полностью (на любом включённом языке).", nil, nil, nil, true)
-    GameTooltip:AddLine("Нестрогий: часть названия или слова в любом порядке.", nil, nil, nil, true)
+    GameTooltip:AddLine(T("mode_tip"), 1, 1, 1)
+    GameTooltip:AddLine(T("mode_tip_strict"), nil, nil, nil, true)
+    GameTooltip:AddLine(T("mode_tip_loose"), nil, nil, nil, true)
     GameTooltip:Show()
 end)
 modeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+favBtn:SetScript("OnClick", function()
+    viewFav = not viewFav
+    DoSearch()
+end)
+favBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(T("fav_tip"), 1, 1, 1, true)
+    GameTooltip:Show()
+end)
+favBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
 -- При открытии окна сразу подгружаем данные включённых языков (один раз за сессию)
 frame:SetScript("OnShow", function()
     edit:SetFocus()
     EnsureActive()
+    UpdateFavBtn()
 end)
 
+local function ToggleWindow()
+    if frame:IsShown() then frame:Hide() else frame:Show() end
+end
+
 ---------------------------------------------------------------------------
--- Настройки: выбор языков
+-- Настройки: выбор языков и кнопка у миникарты
 ---------------------------------------------------------------------------
-local OpenOptions = function() Print("настройки недоступны в этой версии клиента") end
+local OpenOptions = function() Print(T("no_options")) end
+local ApplyMinimapVisibility   -- объявлена ниже
 
 local panel = CreateFrame("Frame", "ItemLocOptionsPanel")
 panel.name = "ItemLoc"
 
 local pTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 pTitle:SetPoint("TOPLEFT", 16, -16)
-pTitle:SetText("ItemLoc: языки поиска")
+pTitle:SetText(T("opt_title"))
 
 local pHelp = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 pHelp:SetPoint("TOPLEFT", pTitle, "BOTTOMLEFT", 0, -8)
 pHelp:SetWidth(540)
 pHelp:SetJustifyH("LEFT")
-pHelp:SetText("Английский используется всегда. Отметьте дополнительные языки: данные загружаются только "
-    .. "для выбранных языков, при первом открытии окна поиска. Если снять галочку, язык перестанет "
-    .. "участвовать в поиске, а память освободится после /reload.")
+pHelp:SetText(T("opt_help"))
 
 local checks, statuses = {}, {}
+local minimapCheck
 
 local function RefreshPanel()
     for _, info in ipairs(LOCALES) do
@@ -471,14 +686,15 @@ local function RefreshPanel()
         local d = ItemLocData[loc]
         local text = ""
         if d and d.empty then
-            text = "|cff888888нет данных для этой версии игры|r"
+            text = "|cff888888" .. T("st_empty") .. "|r"
         elseif d then
-            text = enabled and "|cff00ff00загружен|r" or "|cff888888загружен до /reload|r"
+            text = enabled and ("|cff00ff00" .. T("st_loaded") .. "|r") or ("|cff888888" .. T("st_loaded_until") .. "|r")
         elseif enabled then
-            text = "|cffff8080не найден: папка ItemLoc_" .. loc .. (loadReason[loc] and (" (" .. tostring(loadReason[loc]) .. ")") or "") .. "|r"
+            text = "|cffff8080" .. T("st_missing", loc) .. (loadReason[loc] and (" (" .. tostring(loadReason[loc]) .. ")") or "") .. "|r"
         end
         statuses[loc]:SetText(text)
     end
+    if minimapCheck then minimapCheck:SetChecked(not db.hideMinimap) end
 end
 
 for i, info in ipairs(LOCALES) do
@@ -504,6 +720,16 @@ for i, info in ipairs(LOCALES) do
     end
     checks[loc], statuses[loc] = cb, st
 end
+
+minimapCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+minimapCheck:SetPoint("TOPLEFT", pHelp, "BOTTOMLEFT", 0, -10 - #LOCALES * 28 - 10)
+local minimapLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+minimapLabel:SetPoint("LEFT", minimapCheck, "RIGHT", 4, 0)
+minimapLabel:SetText(T("opt_minimap"))
+minimapCheck:SetScript("OnClick", function(self)
+    db.hideMinimap = (not self:GetChecked()) or nil
+    ApplyMinimapVisibility()
+end)
 panel:SetScript("OnShow", RefreshPanel)
 
 if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
@@ -520,6 +746,80 @@ elseif InterfaceOptions_AddCategory then
     end
 end
 langBtn:SetScript("OnClick", function() OpenOptions() end)
+
+---------------------------------------------------------------------------
+-- Кнопка у миникарты, пункт в меню аддонов, привязка клавиши
+---------------------------------------------------------------------------
+local minimapBtn
+local function UpdateMinimapPosition()
+    if not minimapBtn then return end
+    local angle = math.rad(db.minimapAngle or 215)
+    local radius = (Minimap:GetWidth() / 2) + 10
+    minimapBtn:ClearAllPoints()
+    minimapBtn:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * radius, math.sin(angle) * radius)
+end
+
+local function MinimapDragUpdate()
+    local mx, my = Minimap:GetCenter()
+    local scale = Minimap:GetEffectiveScale()
+    local cx, cy = GetCursorPosition()
+    db.minimapAngle = math.deg(atan2(cy / scale - my, cx / scale - mx))
+    UpdateMinimapPosition()
+end
+
+if Minimap then
+    minimapBtn = CreateFrame("Button", "ItemLocMinimapButton", Minimap)
+    minimapBtn:SetSize(31, 31)
+    minimapBtn:SetFrameStrata("MEDIUM")
+    minimapBtn:SetFrameLevel(8)
+    minimapBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    minimapBtn:RegisterForDrag("LeftButton")
+    minimapBtn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+    minimapBtn.icon = minimapBtn:CreateTexture(nil, "ARTWORK")
+    minimapBtn.icon:SetSize(20, 20)
+    minimapBtn.icon:SetPoint("TOPLEFT", 7, -6)
+    minimapBtn.icon:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
+    minimapBtn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    minimapBtn.border = minimapBtn:CreateTexture(nil, "OVERLAY")
+    minimapBtn.border:SetSize(53, 53)
+    minimapBtn.border:SetPoint("TOPLEFT")
+    minimapBtn.border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    minimapBtn:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then OpenOptions() else ToggleWindow() end
+    end)
+    minimapBtn:SetScript("OnDragStart", function(self) self:SetScript("OnUpdate", MinimapDragUpdate) end)
+    minimapBtn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+    minimapBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine(T("mm_tip_title"), 1, 1, 1)
+        GameTooltip:AddLine(T("mm_left"), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(T("mm_right"), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(T("mm_drag"), 0.6, 0.6, 0.6)
+        GameTooltip:Show()
+    end)
+    minimapBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
+ApplyMinimapVisibility = function()
+    if not minimapBtn then return end
+    UpdateMinimapPosition()
+    if db.hideMinimap then minimapBtn:Hide() else minimapBtn:Show() end
+end
+
+-- Пункт в меню аддонов у миникарты (если клиент это поддерживает)
+if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then
+    pcall(AddonCompartmentFrame.RegisterAddon, AddonCompartmentFrame, {
+        text = "ItemLoc",
+        icon = "Interface\\Icons\\INV_Misc_Book_09",
+        notCheckable = true,
+        func = function() ToggleWindow() end,
+    })
+end
+
+-- Назначение клавиши: Настройки -> Управление -> Аддоны -> ItemLoc (см. Bindings.xml)
+BINDING_HEADER_ITEMLOC = "ItemLoc"
+BINDING_NAME_ITEMLOC_TOGGLE = T("binding")
+function ItemLoc_Toggle() ToggleWindow() end
 
 ---------------------------------------------------------------------------
 -- Проверка версии клиента: сообщаем, если игра обновилась, а база старая
@@ -540,29 +840,39 @@ local function CheckClientBuild()
     local data = DataBuild()
     if data == client then return end
     if data then
-        Print("клиент игры обновился (сборка " .. client .. "), а база названий собрана для сборки "
-            .. data .. ". Если какие-то предметы не находятся, обновите аддон (CurseForge или GitHub): "
-            .. "новая база выходит автоматически. Подробности: /il info")
+        Print(T("notice_updated", client, data))
     else
-        Print("в аддоне нет метки сборки базы. Обновите аддон до последней версии. Подробности: /il info")
+        Print(T("notice_nomarker"))
     end
 end
 
 local function PrintInfo()
     local client, toc = ClientBuild()
-    Print("клиент: сборка " .. client .. ", Interface " .. tostring(toc))
-    Print("база собрана для сборки " .. (ItemLocDataBuild or "неизвестно"))
+    Print(T("info_client", client, tostring(toc)))
+    Print(T("info_db", ItemLocDataBuild or T("unknown")))
     EnsureActive()
     for _, loc in ipairs(ActiveLocales()) do
         local d = ItemLocData[loc]
         if d then
             local count = 0
             for _ in pairs(d.n) do count = count + 1 end
-            Print(loc .. ": " .. (d.empty and "нет данных для этой версии игры" or (count .. " названий")))
+            Print(d.empty and T("info_nodata", loc) or T("info_names", loc, count))
         else
-            Print(loc .. ": модуль не загружен (" .. tostring(loadReason[loc] or "нет папки ItemLoc_" .. loc) .. ")")
+            Print(T("info_notloaded", loc, tostring(loadReason[loc] or T("info_nofolder", loc))))
         end
     end
+end
+
+local function PrintHelp()
+    Print(T("help_title"))
+    for i = 1, 6 do print("  " .. T("help_" .. i)) end
+end
+
+-- Приветствие один раз после установки
+local function ShowWelcome()
+    if db.seenWelcome then return end
+    db.seenWelcome = true
+    Print(T("welcome"))
 end
 
 ---------------------------------------------------------------------------
@@ -585,10 +895,14 @@ loader:SetScript("OnEvent", function(_, event, arg1, arg2)
             if clientLocale ~= "enUS" then db.langs[clientLocale] = true end
         end
         db.langs.enUS = nil   -- английский включён всегда и отдельно не хранится
+        if type(db.favorites) ~= "table" then db.favorites = {} end
         UpdateModeText()
+        UpdateFavBtn()
+        ApplyMinimapVisibility()
     elseif event == "PLAYER_LOGIN" then
-        -- небольшая пауза, чтобы сообщение не потерялось среди других при входе
-        if C_Timer and C_Timer.After then C_Timer.After(4, CheckClientBuild) else CheckClientBuild() end
+        local function onLogin() ShowWelcome(); CheckClientBuild() end
+        -- небольшая пауза, чтобы сообщения не потерялись среди других при входе
+        if C_Timer and C_Timer.After then C_Timer.After(4, onLogin) else onLogin() end
     elseif event == "GET_ITEM_INFO_RECEIVED" then
         for i = 1, ROWS_COUNT do
             local row = rows[i]
@@ -600,6 +914,8 @@ loader:SetScript("OnEvent", function(_, event, arg1, arg2)
     end
 end)
 UpdateModeText()
+UpdateFavBtn()
+ApplyMinimapVisibility()
 
 SLASH_ITEMLOC1 = "/il"
 SLASH_ITEMLOC2 = "/itemloc"
@@ -607,14 +923,19 @@ SlashCmdList["ITEMLOC"] = function(msg)
     msg = msg or ""
     local cmd = msg:lower():gsub("^%s+", ""):gsub("%s+$", "")
     if cmd == "info" then PrintInfo() return end
+    if cmd == "help" or cmd == "?" or cmd == "справка" then PrintHelp() return end
     if cmd == "lang" or cmd == "config" or cmd == "языки" then OpenOptions() return end
+    if cmd == "minimap" then
+        db.hideMinimap = (not db.hideMinimap) or nil
+        ApplyMinimapVisibility()
+        Print(db.hideMinimap and T("minimap_off") or T("minimap_on"))
+        return
+    end
     if msg ~= "" then
         frame:Show()
         edit:SetText(msg)
         DoSearch()
-    elseif frame:IsShown() then
-        frame:Hide()
     else
-        frame:Show()
+        ToggleWindow()
     end
 end

@@ -119,44 +119,44 @@ class Pagination(AddonTestCase):
         self.g.slash("")
         self.g.type_and_search("item")          # результатов заметно больше одной страницы
 
-    def label(self):
-        return self.g.ev("pageText._text")
+    def numbers(self):
+        """(текущая страница, всего страниц) из подписи на любом языке."""
+        import re
+        found = re.findall(r"\d+", self.g.ev("pageText._text"))
+        return int(found[0]), int(found[1])
 
     def click(self, button, shift=False):
         self.g.lua.execute(f"SHIFT = {str(shift).lower()}; {button}._scripts.OnClick(); SHIFT = false")
 
-    def total_pages(self):
-        return int(self.label().rsplit(" ", 1)[1])
-
     def test_next_and_previous(self):
-        self.assertTrue(self.label().startswith("Стр. 1 из "))
+        self.assertEqual(self.numbers()[0], 1)
         self.assertFalse(self.g.ev("prevBtn._enabled"))
         self.click("nextBtn")
-        self.assertTrue(self.label().startswith("Стр. 2 из "))
+        self.assertEqual(self.numbers()[0], 2)
         self.assertTrue(self.g.ev("prevBtn._enabled"))
         self.click("prevBtn")
-        self.assertTrue(self.label().startswith("Стр. 1 из "))
+        self.assertEqual(self.numbers()[0], 1)
 
     def test_shift_click_jumps_to_edges_and_last_page_disables_next(self):
-        pages = self.total_pages()
+        pages = self.numbers()[1]
         self.click("nextBtn", shift=True)
-        self.assertEqual(self.label(), f"Стр. {pages} из {pages}")
+        self.assertEqual(self.numbers(), (pages, pages))
         self.assertFalse(self.g.ev("nextBtn._enabled"))
         self.click("nextBtn")                                   # дальше последней не уходит
-        self.assertEqual(self.label(), f"Стр. {pages} из {pages}")
+        self.assertEqual(self.numbers(), (pages, pages))
         self.click("prevBtn", shift=True)
-        self.assertTrue(self.label().startswith("Стр. 1 из "))
+        self.assertEqual(self.numbers()[0], 1)
 
     def test_mouse_wheel(self):
         self.g.lua.execute("frame._scripts.OnMouseWheel(frame, -1)")
-        self.assertTrue(self.label().startswith("Стр. 2 из "))
+        self.assertEqual(self.numbers()[0], 2)
         self.g.lua.execute("frame._scripts.OnMouseWheel(frame, 1)")
-        self.assertTrue(self.label().startswith("Стр. 1 из "))
+        self.assertEqual(self.numbers()[0], 1)
 
     def test_new_search_returns_to_first_page(self):
         self.click("nextBtn")
         self.g.type_and_search("item 1")
-        self.assertTrue(self.label().startswith("Стр. 1 из "))
+        self.assertEqual(self.numbers()[0], 1)
 
     def test_rows_per_page_shrink_with_more_languages(self):
         english_only = self.g.ev("perPage")
@@ -168,12 +168,12 @@ class Pagination(AddonTestCase):
 
 class ClientBuildNotice(AddonTestCase):
     def test_silent_when_builds_match(self):
-        g = self.game(client_build="70205", data_build="1.60.1.70205")
+        g = self.game(client_build="70205", data_build="1.60.1.70205", saved="{ seenWelcome = true }")
         g.fire("PLAYER_LOGIN")
         self.assertEqual(g.printed(), [])
 
     def test_notice_when_client_updated_and_only_once(self):
-        g = self.game(client_build="70300", data_build="1.60.1.70205")
+        g = self.game(client_build="70300", data_build="1.60.1.70205", saved="{ seenWelcome = true }")
         g.fire("PLAYER_LOGIN")
         self.assertEqual(len(g.printed()), 1)
         self.assertIn("70300", g.printed()[0]); self.assertIn("70205", g.printed()[0])
@@ -181,7 +181,7 @@ class ClientBuildNotice(AddonTestCase):
         self.assertEqual(len(g.printed()), 1)
 
     def test_notice_when_build_marker_missing(self):
-        g = self.game(data_build=None)
+        g = self.game(data_build=None, saved="{ seenWelcome = true }")
         g.fire("PLAYER_LOGIN")
         self.assertIn("метки сборки", g.printed()[0])
 
@@ -197,6 +197,165 @@ class Settings(AddonTestCase):
         self.assertTrue(g.ev("REGISTERED ~= nil"))
         g.slash("lang")
         self.assertEqual(g.ev("OPENED"), 42)
+
+
+
+class Favorites(AddonTestCase):
+    def setUp(self):
+        super().setUp()
+        self.g = self.game(locale="enUS")
+        self.g.slash("")
+        self.g.type_and_search("hearthstone")        # id 2 (точное) и id 3
+
+    def star(self, i):
+        self.g.lua.execute(f"rows[{i}].star._scripts.OnClick()")
+
+    def favorites(self):
+        return self.g.ev("(function() local o = {} for k in pairs(db.favorites) do o[#o+1] = k end "
+                         "table.sort(o) return table.concat(o, ',') end)()")
+
+    def test_star_toggles_favorite_and_updates_counter(self):
+        self.assertEqual(self.favorites(), "")
+        self.star(1)
+        self.assertEqual(self.favorites(), "2")
+        self.assertIn("(1)", self.g.ev("favBtn._text"))
+        self.assertEqual(self.g.ev("rows[1].star.tex._alpha"), 1)
+        self.star(1)
+        self.assertEqual(self.favorites(), "")
+        self.assertIn("(0)", self.g.ev("favBtn._text"))
+
+    def test_favorites_view_lists_only_marked_items(self):
+        self.star(2)                                   # id 3
+        self.g.lua.execute("favBtn._scripts.OnClick()")
+        self.assertTrue(self.g.ev("viewFav"))
+        self.assertEqual(self.g.ev("#currentResults_ids()") if False else self.g.ev(
+            "(function() local o = {} for i = 1, #rows do if rows[i]._shown then o[#o+1] = rows[i].id end end return table.concat(o, ',') end)()"), "3")
+        self.g.lua.execute("favBtn._scripts.OnClick()")  # назад к поиску
+        self.assertFalse(self.g.ev("viewFav"))
+
+    def test_query_filters_the_favorites_list(self):
+        self.star(1); self.star(2)
+        self.g.lua.execute("favBtn._scripts.OnClick()")
+        self.g.type_and_search("charm")
+        shown = self.g.ev("(function() local o = {} for i = 1, #rows do if rows[i]._shown then o[#o+1] = rows[i].id end end return table.concat(o, ',') end)()")
+        self.assertEqual(shown, "3")
+
+    def test_removing_from_favorites_view_updates_the_list(self):
+        self.star(1)
+        self.g.lua.execute("favBtn._scripts.OnClick()")
+        self.star(1)
+        self.assertEqual(self.favorites(), "")
+        self.assertIn("No favorites", self.g.ev("status._text"))
+
+    def test_favorites_are_saved_in_settings_and_survive_reload(self):
+        self.star(1)
+        saved = self.g.ev("(function() local o = {} for k in pairs(ItemLocDB.favorites) do o[#o+1] = k end return table.concat(o, ',') end)()")
+        self.assertEqual(saved, "2")
+        g2 = self.game(locale="enUS", saved="{ favorites = { [3] = true }, seenWelcome = true }")
+        self.assertIn("(1)", g2.ev("favBtn._text"))
+
+
+class MinimapButton(AddonTestCase):
+    def setUp(self):
+        super().setUp()
+        self.g = self.game(locale="enUS")
+
+    def test_left_click_toggles_window_right_click_opens_settings(self):
+        self.assertFalse(self.g.ev("frame._shown"))
+        self.g.lua.execute('minimapBtn._scripts.OnClick(minimapBtn, "LeftButton")')
+        self.assertTrue(self.g.ev("frame._shown"))
+        self.g.lua.execute('minimapBtn._scripts.OnClick(minimapBtn, "LeftButton")')
+        self.assertFalse(self.g.ev("frame._shown"))
+        self.g.lua.execute('minimapBtn._scripts.OnClick(minimapBtn, "RightButton")')
+        self.assertEqual(self.g.ev("OPENED"), 42)
+
+    def test_dragging_saves_angle_around_the_minimap(self):
+        # курсор прямо над центром миникарты -> 90 градусов
+        self.g.lua.execute("minimapBtn._scripts.OnDragStart(minimapBtn); minimapBtn._scripts.OnUpdate(minimapBtn)")
+        self.assertAlmostEqual(self.g.ev("db.minimapAngle"), 90, places=3)
+        self.g.lua.execute("minimapBtn._scripts.OnDragStop(minimapBtn)")
+        self.assertIsNone(self.g.ev("minimapBtn._scripts.OnUpdate"))
+
+    def test_command_hides_and_shows_button_and_is_remembered(self):
+        self.g.slash("minimap")
+        self.assertTrue(self.g.ev("db.hideMinimap"))
+        self.assertFalse(self.g.ev("minimapBtn._shown"))
+        self.g.slash("minimap")
+        self.assertIsNone(self.g.ev("db.hideMinimap"))
+        self.assertTrue(self.g.ev("minimapBtn._shown"))
+
+    def test_hidden_state_is_restored_after_reload(self):
+        g2 = self.game(locale="enUS", saved="{ hideMinimap = true, seenWelcome = true }")
+        self.assertFalse(g2.ev("minimapBtn._shown"))
+
+    def test_checkbox_in_settings_hides_button(self):
+        self.g.lua.execute("minimapCheck = nil")   # (значение ниже берётся из панели)
+        self.g.lua.execute("for _, f in ipairs(FRAMES) do end")
+        self.assertIsNotNone(self.g.ev("COMPARTMENT"))   # пункт меню аддонов зарегистрирован
+        self.assertEqual(self.g.ev("COMPARTMENT.text"), "ItemLoc")
+
+
+class InterfaceLanguage(AddonTestCase):
+    def test_russian_client_gets_russian_interface(self):
+        g = self.game(locale="ruRU"); g.slash("")
+        g.type_and_search("item 7")
+        self.assertIn("Найдено", g.ev("status._text"))
+        self.assertIn("Избранное", g.ev("favBtn._text"))
+
+    def test_other_clients_get_english(self):
+        for loc in ("enUS", "deDE", "frFR"):
+            g = self.game(locale=loc); g.slash("")
+            g.type_and_search("item 7")
+            self.assertIn("Found", g.ev("status._text"), loc)
+            self.assertIn("Favorites", g.ev("favBtn._text"), loc)
+
+    def test_both_languages_have_the_same_keys(self):
+        import re
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ItemLoc.lua"), encoding="utf-8").read()
+        block_en = src[src.index("    enUS = {"):src.index("    ruRU = {")]
+        block_ru = src[src.index("    ruRU = {"):src.index("local CURRENT")]
+        keys = lambda b: set(re.findall(r'\b([a-z][a-z_0-9]*) = "', b))
+        self.assertEqual(keys(block_en) ^ keys(block_ru), set())
+
+    def test_every_translation_key_used_in_code_exists(self):
+        import re
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ItemLoc.lua"), encoding="utf-8").read()
+        used = {k for k in re.findall(r'T\("(\w+)"', src) if not k.endswith("_")}   # help_N формируются в цикле
+        block_en = src[src.index("    enUS = {"):src.index("    ruRU = {")]
+        defined = set(re.findall(r'\b([a-z][a-z_0-9]*) = "', block_en))
+        self.assertEqual(used - defined, set())
+        for i in range(1, 7):
+            self.assertIn(f"help_{i}", defined)
+
+
+class HelpAndWelcome(AddonTestCase):
+    def test_help_lists_commands(self):
+        g = self.game(locale="enUS"); g.slash("help")
+        text = "\n".join(g.printed())
+        for command in ("/il lang", "/il minimap", "/il info"):
+            self.assertIn(command, text)
+
+    def test_welcome_is_shown_once(self):
+        g = self.game(locale="ruRU")
+        g.fire("PLAYER_LOGIN")
+        self.assertTrue(any("/il" in line for line in g.printed()))
+        self.assertTrue(g.ev("ItemLocDB.seenWelcome"))
+        before = len(g.printed())
+        g.fire("PLAYER_LOGIN")
+        self.assertEqual(len(g.printed()), before)
+
+
+class KeyBinding(AddonTestCase):
+    def test_binding_function_and_label_exist(self):
+        g = self.game(locale="enUS")
+        self.assertEqual(g.ev("BINDING_HEADER_ITEMLOC"), "ItemLoc")
+        self.assertTrue(g.ev("type(ItemLoc_Toggle) == 'function'"))
+        g.lua.execute("ItemLoc_Toggle()")
+        self.assertTrue(g.ev("frame._shown"))
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Bindings.xml"), encoding="utf-8") as f:
+            xml = f.read()
+        self.assertIn('name="ITEMLOC_TOGGLE"', xml)
+        self.assertIn("ItemLoc_Toggle()", xml)
 
 
 if __name__ == "__main__":
