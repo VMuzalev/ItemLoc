@@ -778,7 +778,7 @@ if Minimap then
     minimapBtn.icon = minimapBtn:CreateTexture(nil, "ARTWORK")
     minimapBtn.icon:SetSize(20, 20)
     minimapBtn.icon:SetPoint("TOPLEFT", 7, -6)
-    minimapBtn.icon:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
+    minimapBtn.icon:SetTexture("Interface\\Icons\\INV_Misc_Book_04")
     minimapBtn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     minimapBtn.border = minimapBtn:CreateTexture(nil, "OVERLAY")
     minimapBtn.border:SetSize(53, 53)
@@ -810,7 +810,7 @@ end
 if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then
     pcall(AddonCompartmentFrame.RegisterAddon, AddonCompartmentFrame, {
         text = "ItemLoc",
-        icon = "Interface\\Icons\\INV_Misc_Book_09",
+        icon = "Interface\\Icons\\INV_Misc_Book_04",
         notCheckable = true,
         func = function() ToggleWindow() end,
     })

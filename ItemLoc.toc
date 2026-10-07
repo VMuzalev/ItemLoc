@@ -6,5 +6,6 @@
 ## Group: ItemLoc
 ## X-Curse-Project-ID: 1729520
 ## SavedVariables: ItemLocDB
+## IconTexture: Interface\Icons\INV_Misc_Book_04
 Build.lua
 ItemLoc.lua

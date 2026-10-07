@@ -234,6 +234,7 @@ def write_module(loc, label, names, interface):
         f.write("## LoadOnDemand: 1\n")
         f.write("## Dependencies: ItemLoc\n")
         f.write("## Group: ItemLoc\n")   # в списке аддонов модули сворачиваются под основным (клиент 11.1.0+)
+        f.write("## IconTexture: Interface\\Icons\\INV_Misc_Book_04\n")   # иконка в списке аддонов
         f.write("## Version: @project-version@\n")
         f.write("Data.lua\n")
 
