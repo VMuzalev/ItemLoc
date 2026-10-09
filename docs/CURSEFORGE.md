@@ -1,66 +1,33 @@
-# Описание для страницы проекта на CurseForge
+# Страница проекта на CurseForge
 
-Скопируйте нужный блок в поле Description (редактор поддерживает форматирование, заголовки и списки).
-Скриншоты загрузите на вкладке Images: окно поиска с результатами, настройки языков, кнопка у миникарты.
+Как заполнять: **Summary** вставляется в одноимённое поле (до ~200 символов), **Description** вставляется
+в редактор описания. Самый надёжный способ: в редакторе переключиться в режим исходного кода (Source / `<>`)
+и вставить содержимое `curseforge_description.html`. Скриншоты загружаются на вкладке Images (Gallery).
 
----
+## Summary (краткое описание)
 
-## Русский
+EN: Find any item by name in any language. Paste a name from a website, get the item with its names in every language you choose. Strict/loose search, favorites, minimap button.
 
-**ItemLoc** ищет предметы по названию на любом из языков клиента. Играете на русском, а название
-предмета нашли на английском сайте? Вставьте его в окно и получите предмет с названиями на всех выбранных
-языках, иконкой и обычным тултипом из игры.
+RU: Поиск предметов по названию на любом языке: вставьте название с сайта и получите предмет с названиями на выбранных языках. Строгий и нестрогий поиск, избранное, кнопка у миникарты.
 
-**Возможности**
-- Поиск по названию на английском, русском, немецком, французском, испанском, итальянском, португальском,
-  корейском и китайском: включайте только те языки, которые нужны
-- Строгий режим (полное совпадение) и нестрогий (часть названия или слова в любом порядке)
-- Избранное: отметьте предмет звёздочкой и открывайте список одной кнопкой
-- Кнопка у миникарты, команда `/il`, назначаемая клавиша
-- Данные берутся из самой игры: тултип, иконка и характеристики всегда соответствуют вашему клиенту
-- Интерфейс на русском и английском
+## Что улучшено в описании
 
-**Как пользоваться**
-1. Нажмите кнопку с книгой у миникарты или введите `/il`.
-2. Вставьте название предмета и нажмите Enter.
-3. Другие языки включаются кнопкой «Языки...» или командой `/il lang`.
-4. Справка: `/il help`.
+- Сначала суть и пример («нашли название на английском сайте, играете на русском»), потом возможности.
+- Раздел «Быстрый старт» из 4 шагов и предупреждение, что копировать нужно **все** папки `ItemLoc*`.
+- Раздел вопросов и ответов: частые проблемы (модуль не найден, предмет не находится, список аддонов).
+- Честные ограничения: данные берутся из клиентских таблиц, самые новые предметы могут отсутствовать.
+- Ссылка на GitHub для обращений, отметка о правах Blizzard.
+- Два языка в одном описании: английский сверху (его читает большинство), русский ниже.
 
-**Установка.** Скопируйте **все** папки из архива (`ItemLoc` и `ItemLoc_enUS`, `ItemLoc_ruRU` и т. д.)
-в `Interface\AddOns`. Ненужные языки можно удалить (кроме `ItemLoc_enUS`): они загружаются только по
-запросу и на скорость игры не влияют.
+## Что сделать на странице
 
-**Если что-то не работает.** Выполните `/il info` и создайте обращение на странице проекта на GitHub.
-
-Названия, иконки и данные предметов © Blizzard Entertainment. Проект неофициальный.
-
----
-
-## English
-
-**ItemLoc** finds items by name in any client language. Playing in one language but found an item name on
-a website in another? Paste it into the window and get the item with its names in every language you
-selected, its icon and the regular in-game tooltip.
-
-**Features**
-- Search by name in English, Russian, German, French, Spanish, Italian, Portuguese, Korean and Chinese:
-  enable only the languages you need
-- Strict mode (full match) and loose mode (part of a name, or words in any order)
-- Favorites: mark items with a star and open your list with one click
-- Minimap button, the `/il` command and a bindable key
-- Data comes from the game itself: tooltips, icons and stats always match your client
-- Interface in English and Russian
-
-**How to use**
-1. Click the book button next to the minimap or type `/il`.
-2. Paste an item name and press Enter.
-3. Enable other languages with the "Languages..." button or `/il lang`.
-4. Help: `/il help`.
-
-**Installation.** Copy **all** folders from the archive (`ItemLoc`, `ItemLoc_enUS`, `ItemLoc_ruRU`, ...)
-into `Interface\AddOns`. You can delete languages you do not need (except `ItemLoc_enUS`): they are
-loaded on demand and do not slow the game down.
-
-**Problems?** Run `/il info` and open an issue on the project's GitHub page.
-
-Item names, icons and data are © Blizzard Entertainment. This project is unofficial.
+1. **Скриншоты** (Images): окно с результатами на двух-трёх языках; вкладка «Языки»; кнопка у миникарты;
+   избранное. Первый скриншот показывается на странице как главный.
+2. **Источник и обращения**: в Edit project → Links укажите Source `https://github.com/VMuzalev/ItemLoc`
+   и Issues `https://github.com/VMuzalev/ItemLoc/issues`.
+3. **Категории**: сейчас стоит Tooltip. Подходят ещё Miscellaneous (если есть) и Auction & Economy
+   только если вам близко, остальные не добавляйте, чтобы не вводить игроков в заблуждение.
+4. **Лицензия**: сейчас «All Rights Reserved». Репозиторий на GitHub публичный, поэтому решите, нужна ли
+   открытая лицензия (например, MIT). Если оставите как есть, текст ниже это не нарушает.
+5. **Changelog** в каждом файле заполняется автоматически из коммитов; если он выглядит неряшливо,
+   можно вести файл `CHANGELOG.md` в корне репозитория (упаковщик подхватывает его сам).

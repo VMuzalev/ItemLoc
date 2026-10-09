@@ -324,7 +324,7 @@ class InterfaceLanguage(AddonTestCase):
         block_en = src[src.index("    enUS = {"):src.index("    ruRU = {")]
         defined = set(re.findall(r'\b([a-z][a-z_0-9]*) = "', block_en))
         self.assertEqual(used - defined, set())
-        for i in range(1, 7):
+        for i in range(1, 8):
             self.assertIn(f"help_{i}", defined)
 
 
@@ -356,6 +356,56 @@ class KeyBinding(AddonTestCase):
             xml = f.read()
         self.assertIn('name="ITEMLOC_TOGGLE"', xml)
         self.assertIn("ItemLoc_Toggle()", xml)
+
+
+
+class UiLanguageButton(AddonTestCase):
+    def test_button_shows_current_language_and_switches(self):
+        g = self.game(locale="ruRU"); g.slash("")
+        self.assertEqual(g.ev("uiBtn._text"), "RU")
+        self.assertIn("Избранное", g.ev("favBtn._text"))
+        g.lua.execute("uiBtn._scripts.OnClick()")
+        self.assertEqual(g.ev("uiBtn._text"), "EN")
+        self.assertIn("Favorites", g.ev("favBtn._text"))
+        self.assertEqual(g.ev("title._text"), "ItemLoc: item search")
+        g.lua.execute("uiBtn._scripts.OnClick()")
+        self.assertEqual(g.ev("uiBtn._text"), "RU")
+
+    def test_choice_is_saved_and_survives_reload(self):
+        g = self.game(locale="ruRU")
+        g.lua.execute("uiBtn._scripts.OnClick()")
+        self.assertEqual(g.ev("ItemLocDB.uiLang"), "enUS")
+        g2 = self.game(locale="ruRU", saved="{ uiLang = 'enUS', seenWelcome = true }")
+        self.assertEqual(g2.ev("uiBtn._text"), "EN")
+        self.assertIn("Favorites", g2.ev("favBtn._text"))
+
+    def test_switch_updates_existing_results_and_settings_panel(self):
+        g = self.game(locale="ruRU"); g.slash("")
+        g.type_and_search("item 7")
+        self.assertIn("Найдено", g.ev("status._text"))
+        g.lua.execute("uiBtn._scripts.OnClick()")
+        self.assertIn("Found", g.ev("status._text"))
+        self.assertIn("Languages", g.ev("langBtn._text"))
+        self.assertEqual(g.ev("minimapLabel._text"), "Show the minimap button")
+
+    def test_empty_state_message_is_retranslated(self):
+        g = self.game(locale="ruRU"); g.slash("")
+        g.lua.execute('edit._text = ""; DoSearch()')
+        self.assertIn("Введите", g.ev("status._text"))
+        g.lua.execute("uiBtn._scripts.OnClick()")
+        self.assertIn("Enter an item name", g.ev("status._text"))
+
+    def test_slash_command_sets_and_resets_language(self):
+        g = self.game(locale="ruRU")
+        g.slash("ui en");   self.assertEqual(g.ev("uiBtn._text"), "EN")
+        g.slash("ui ru");   self.assertEqual(g.ev("uiBtn._text"), "RU")
+        g.slash("ui en");   g.slash("ui auto")
+        self.assertEqual(g.ev("uiBtn._text"), "RU")             # вернулся язык клиента (ruRU)
+        self.assertIsNone(g.ev("ItemLocDB.uiLang"))
+
+    def test_auto_follows_client_language_for_other_locales(self):
+        g = self.game(locale="deDE")
+        self.assertEqual(g.ev("uiBtn._text"), "EN")
 
 
 if __name__ == "__main__":

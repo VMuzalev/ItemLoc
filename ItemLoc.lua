@@ -66,6 +66,8 @@ local STRINGS = {
         info_names = "%s: %d names", info_nodata = "%s: no data for this game version",
         info_notloaded = "%s: module not loaded (%s)", info_nofolder = "no folder ItemLoc_%s",
         no_options = "settings are not available in this client version",
+        ui_tip_title = "Interface language", ui_tip_click = "Click: switch English / Русский",
+        ui_tip_auto = "/il ui auto: follow the game client language",
         minimap_on = "minimap button shown", minimap_off = "minimap button hidden",
         welcome = "installed. Open the window with /il or the minimap button. Languages: /il lang. Help: /il help",
         help_title = "commands:",
@@ -73,6 +75,7 @@ local STRINGS = {
         help_3 = "/il lang - choose search languages", help_4 = "/il minimap - show or hide the minimap button",
         help_5 = "/il info - client build, database build and language status",
         help_6 = "In the window: Enter = search, star = favorite, Shift+click = link in chat, mouse wheel = pages.",
+        help_7 = "/il ui en|ru|auto - interface language",
     },
     ruRU = {
         title = "ItemLoc: поиск предметов",
@@ -112,6 +115,8 @@ local STRINGS = {
         info_names = "%s: %d названий", info_nodata = "%s: нет данных для этой версии игры",
         info_notloaded = "%s: модуль не загружен (%s)", info_nofolder = "нет папки ItemLoc_%s",
         no_options = "настройки недоступны в этой версии клиента",
+        ui_tip_title = "Язык интерфейса", ui_tip_click = "Клик: переключить English / Русский",
+        ui_tip_auto = "/il ui auto: как в клиенте игры",
         minimap_on = "кнопка у миникарты показана", minimap_off = "кнопка у миникарты скрыта",
         welcome = "установлен. Откройте окно командой /il или кнопкой у миникарты. Языки: /il lang. Справка: /il help",
         help_title = "команды:",
@@ -119,9 +124,11 @@ local STRINGS = {
         help_3 = "/il lang - выбрать языки поиска", help_4 = "/il minimap - показать или скрыть кнопку у миникарты",
         help_5 = "/il info - сборка клиента, сборка базы и состояние языков",
         help_6 = "В окне: Enter = поиск, звёздочка = избранное, Shift+клик = ссылка в чат, колесо мыши = страницы.",
+        help_7 = "/il ui en|ru|auto - язык интерфейса",
     },
 }
 local CURRENT = STRINGS[GetLocale()] or STRINGS.enUS
+local function SetUILanguage(code) CURRENT = STRINGS[code] or STRINGS.enUS end
 
 local function T(key, ...)
     local s = CURRENT[key] or STRINGS.enUS[key] or key
@@ -301,6 +308,10 @@ title:SetText(T("title"))
 local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 closeBtn:SetPoint("TOPRIGHT", -6, -6)
 
+local uiBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+uiBtn:SetSize(40, 22)
+uiBtn:SetPoint("TOPLEFT", 16, -14)
+
 local edit = CreateFrame("EditBox", "ItemLocEditBox", frame, "InputBoxTemplate")
 edit:SetSize(400, 22)
 edit:SetPoint("TOPLEFT", 30, -48)
@@ -435,8 +446,14 @@ end
 -- Постраничный просмотр
 ---------------------------------------------------------------------------
 local currentResults, page = {}, 1
-local statusExtra = ""             -- дописывается к строке состояния (например, нет данных для языка)
-local emptyText = T("nothing")     -- что писать, когда результатов нет
+local missingLangs = {}             -- языки без данных: дописываются к строке состояния
+local emptyKey = "nothing"         -- что писать, когда результатов нет (ключ перевода)
+local hasSearched = false
+
+local function ExtraText()
+    if #missingLangs == 0 then return "" end
+    return "  |cffff8080" .. T("missing_langs", table.concat(missingLangs, ", ")) .. "|r"
+end
 
 local pageText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 pageText:SetPoint("BOTTOM", 0, 24)
@@ -521,10 +538,10 @@ local function ShowPage()
 
     if total == 0 then
         pageText:SetText("")
-        status:SetText(emptyText .. statusExtra)
+        status:SetText(T(emptyKey) .. ExtraText())
     else
         pageText:SetText(T("page", page, pages))
-        status:SetText(T("found", total) .. statusExtra)
+        status:SetText(T("found", total) .. ExtraText())
     end
     if page > 1 then prevBtn:Enable() else prevBtn:Disable() end
     if page < pages then nextBtn:Enable() else nextBtn:Disable() end
@@ -532,6 +549,7 @@ local function ShowPage()
 end
 
 local function ShowResults(results)
+    hasSearched = true
     currentResults = results
     page = 1
     ShowPage()
@@ -566,25 +584,22 @@ frame:SetScript("OnMouseWheel", function(_, delta) GoToPage(-delta) end)
 ---------------------------------------------------------------------------
 DoSearch = function()
     local missing = EnsureActive()
-    statusExtra = ""
-    emptyText = T("nothing")
+    missingLangs = missing
+    emptyKey = "nothing"
     if not ItemLocData.enUS then
         ShowResults({})
         status:SetText("|cffff8080" .. T("no_english") .. "|r")
         return
     end
-    if #missing > 0 then
-        statusExtra = "  |cffff8080" .. T("missing_langs", table.concat(missing, ", ")) .. "|r"
-    end
 
     local q = normalize(edit:GetText())
     if viewFav then
-        if FavoriteCount() == 0 then emptyText = T("fav_empty") end
+        if FavoriteCount() == 0 then emptyKey = "fav_empty" end
         ShowResults(FavoriteList(q))
         return
     end
     if q == "" then
-        emptyText = T("enter_query")
+        emptyKey = "enter_query"
         ShowResults({})
         return
     end
@@ -822,6 +837,38 @@ BINDING_NAME_ITEMLOC_TOGGLE = T("binding")
 function ItemLoc_Toggle() ToggleWindow() end
 
 ---------------------------------------------------------------------------
+-- Язык интерфейса: по языку клиента или выбран кнопкой в углу окна
+---------------------------------------------------------------------------
+local function ApplyUILanguage()
+    SetUILanguage(db.uiLang or GetLocale())
+    title:SetText(T("title"))
+    searchBtn:SetText(T("find"))
+    langBtn:SetText(T("languages"))
+    pTitle:SetText(T("opt_title"))
+    pHelp:SetText(T("opt_help"))
+    minimapLabel:SetText(T("opt_minimap"))
+    BINDING_NAME_ITEMLOC_TOGGLE = T("binding")
+    uiBtn:SetText(CURRENT == STRINGS.ruRU and "RU" or "EN")
+    UpdateModeText()
+    UpdateFavBtn()
+    RefreshPanel()
+    if hasSearched then ShowPage() end
+end
+
+uiBtn:SetScript("OnClick", function()
+    db.uiLang = (CURRENT == STRINGS.ruRU) and "enUS" or "ruRU"
+    ApplyUILanguage()
+end)
+uiBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(T("ui_tip_title"), 1, 1, 1)
+    GameTooltip:AddLine(T("ui_tip_click"), 0.8, 0.8, 0.8)
+    GameTooltip:AddLine(T("ui_tip_auto"), 0.6, 0.6, 0.6)
+    GameTooltip:Show()
+end)
+uiBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+---------------------------------------------------------------------------
 -- Проверка версии клиента: сообщаем, если игра обновилась, а база старая
 ---------------------------------------------------------------------------
 local function ClientBuild()
@@ -865,7 +912,7 @@ end
 
 local function PrintHelp()
     Print(T("help_title"))
-    for i = 1, 6 do print("  " .. T("help_" .. i)) end
+    for i = 1, 7 do print("  " .. T("help_" .. i)) end
 end
 
 -- Приветствие один раз после установки
@@ -896,8 +943,7 @@ loader:SetScript("OnEvent", function(_, event, arg1, arg2)
         end
         db.langs.enUS = nil   -- английский включён всегда и отдельно не хранится
         if type(db.favorites) ~= "table" then db.favorites = {} end
-        UpdateModeText()
-        UpdateFavBtn()
+        ApplyUILanguage()
         ApplyMinimapVisibility()
     elseif event == "PLAYER_LOGIN" then
         local function onLogin() ShowWelcome(); CheckClientBuild() end
@@ -913,8 +959,7 @@ loader:SetScript("OnEvent", function(_, event, arg1, arg2)
         end
     end
 end)
-UpdateModeText()
-UpdateFavBtn()
+ApplyUILanguage()
 ApplyMinimapVisibility()
 
 SLASH_ITEMLOC1 = "/il"
@@ -923,6 +968,13 @@ SlashCmdList["ITEMLOC"] = function(msg)
     msg = msg or ""
     local cmd = msg:lower():gsub("^%s+", ""):gsub("%s+$", "")
     if cmd == "info" then PrintInfo() return end
+    local uiArg = cmd:match("^ui%s*(%S*)$")
+    if uiArg then
+        local codes = { en = "enUS", ru = "ruRU" }
+        db.uiLang = codes[uiArg]     -- auto или что-то другое: вернуть язык клиента
+        ApplyUILanguage()
+        return
+    end
     if cmd == "help" or cmd == "?" or cmd == "справка" then PrintHelp() return end
     if cmd == "lang" or cmd == "config" or cmd == "языки" then OpenOptions() return end
     if cmd == "minimap" then

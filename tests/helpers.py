@@ -82,6 +82,10 @@ local function stub()
     if k == "id" or k == "failed" or k == "link" or k:sub(1, 1) == "_" then return nil end
     if k == "GetText" then return function(self) return self._text or "" end end
     if k == "SetText" then return function(self, v) self._text = v end end
+    if k == "SetFocus" then return function(self) self._focus = true end end
+    if k == "ClearFocus" then return function(self) self._focus = false end end
+    if k == "HasFocus" then return function(self) return self._focus == true end end
+    if k == "Insert" then return function(self, v) self._text = (self._text or "") .. v end end
     if k == "SetAlpha" then return function(self, v) self._alpha = v end end
     if k == "SetDesaturated" then return function(self, v) self._desat = v end end
     if k == "SetChecked" then return function(self, v) self._checked = v end end
@@ -115,6 +119,11 @@ C_AddOns = { LoadAddOn = function(name)
     assert(loadstring(src, name))()
     return true
 end }
+HOOKS = {}
+hooksecurefunc = function(a, b, c)
+    if type(a) == "string" then HOOKS[a] = b else HOOKS[b] = c end
+end
+ChatEdit_InsertLink = function() return false end
 Minimap = stub()
 Minimap.GetWidth = function() return 140 end
 Minimap.GetCenter = function() return 100, 100 end
@@ -137,7 +146,9 @@ EXPOSE = [
     ("local function normalize", "function normalize"), ("local DoSearch ", "DoSearch = nil -- "),
     ("local db = ", "db = "), ("local panel = CreateFrame", "panel = CreateFrame"),
     ("local prevBtn", "prevBtn"), ("local nextBtn", "nextBtn"), ("local minimapBtn\n", "minimapBtn = nil\n"),
-    ("local favBtn", "favBtn"), ("local viewFav", "viewFav"),
+    ("local favBtn", "favBtn"), ("local viewFav", "viewFav"), ("local uiBtn", "uiBtn"), ("local langBtn = CreateFrame", "langBtn = CreateFrame"),
+    ("local title = frame:CreateFontString", "title = frame:CreateFontString"),
+    ("local minimapLabel = panel", "minimapLabel = panel"),
 ]
 
 
