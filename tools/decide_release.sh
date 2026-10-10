@@ -11,9 +11,9 @@ if [ "$NEW_BUILD" != "$old_build" ]; then
   echo "Новая сборка данных: $old_build -> $NEW_BUILD"
   changed=true
 fi
-if ! git diff --quiet -- ItemLoc.toc; then
+if ! git diff --quiet -- Polyglot.toc; then
   echo "Изменился номер Interface:"
-  git diff -- ItemLoc.toc
+  git diff -- Polyglot.toc
   changed=true
 fi
 if [ "${FORCE:-false}" = "true" ]; then

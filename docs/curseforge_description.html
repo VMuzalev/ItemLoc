@@ -1,5 +1,5 @@
-<h2>ItemLoc</h2>
-<p><strong>Find any item by name, in any language.</strong> You play in one language, but found the item name on a website in another? Paste it into the ItemLoc window and get the item with its names in every language you chose, its icon and the regular in-game tooltip.</p>
+<h2>Polyglot <small>(formerly ItemLoc)</small></h2>
+<p><strong>Find any item by name, in any language.</strong> You play in one language, but found the item name on a website in another? Paste it into the Polyglot window and get the item with its names in every language you chose, its icon and the regular in-game tooltip.</p>
 <p><em>Example: you play in Russian and read "Thunderfury" on an English guide. Paste it, and see "Громовая Ярость" and "Donnerfury" next to it.</em></p>
 
 <h3>Features</h3>
@@ -8,7 +8,7 @@
 <li><strong>Strict and loose search.</strong> Strict needs the full name, loose finds part of a name or several words in any order. Case does not matter, including Cyrillic and accented letters.</li>
 <li><strong>Favorites:</strong> mark an item with a star and open your list with one click.</li>
 <li><strong>Real game data:</strong> icon, quality colour, type, level and the full tooltip come from your own client, so they always match your game version. Shift+click inserts the item link into chat.</li>
-<li><strong>Easy to open:</strong> minimap button, the <code>/il</code> command, the addon menu and a bindable key.</li>
+<li><strong>Easy to open:</strong> minimap button, the <code>/pg</code> command, the addon menu and a bindable key.</li>
 <li><strong>Interface in English and Russian</strong> with a one-click RU/EN switch.</li>
 <li><strong>Light on memory:</strong> every language is a separate module that loads only when you enable it.</li>
 </ul>
@@ -16,27 +16,28 @@
 <h3>Quick start</h3>
 <ol>
 <li>Install the addon (see below) and log in.</li>
-<li>Click the book button by the minimap or type <code>/il</code>.</li>
+<li>Click the book button by the minimap or type <code>/pg</code>.</li>
 <li>Paste an item name and press Enter.</li>
-<li>Need another language? Click <strong>Languages...</strong> (or type <code>/il lang</code>) and tick it.</li>
+<li>Need another language? Click <strong>Languages...</strong> (or type <code>/pg lang</code>) and tick it.</li>
 </ol>
-<p>All commands: <code>/il help</code>.</p>
+<p>All commands: <code>/pg help</code>.</p>
 
 <h3>Installation</h3>
-<p>Copy <strong>all</strong> folders from the archive (<code>ItemLoc</code>, <code>ItemLoc_enUS</code>, <code>ItemLoc_ruRU</code>, and so on) into <code>Interface\AddOns</code>. Languages you do not need can be deleted, except <code>ItemLoc_enUS</code>. Fully restart the game after installing. In the addon list the language modules are grouped under ItemLoc.</p>
+<p>Copy <strong>all</strong> folders from the archive (<code>Polyglot</code>, <code>Polyglot_enUS</code>, <code>Polyglot_ruRU</code>, and so on) into <code>Interface\AddOns</code>. Languages you do not need can be deleted, except <code>Polyglot_enUS</code>. Fully restart the game after installing. In the addon list the language modules are grouped under Polyglot.</p>
 
 <h3>FAQ</h3>
-<p><strong>"Module ItemLoc_enUS not found".</strong> Only the <code>ItemLoc</code> folder was copied. Copy all <code>ItemLoc_*</code> folders too and restart the game.</p>
-<p><strong>An item is not found.</strong> Check that the language you search in is enabled (<code>/il lang</code>) and try loose mode. Names come from client data tables, so some very new Forever items may be missing for now. Please report them on GitHub with the output of <code>/il info</code>.</p>
-<p><strong>The game was updated.</strong> ItemLoc tells you at login if its name database was built for another client build. A new version is published automatically; just update the addon.</p>
+<p><strong>I used ItemLoc before.</strong> This is the same addon under a new name. Delete the old <code>ItemLoc</code> and <code>ItemLoc_*</code> folders from <code>Interface\AddOns</code> before installing. If the old addon is still enabled at your first login, your settings and favorites are copied automatically. The old <code>/il</code> command still works; the key binding has to be set again.</p>
+<p><strong>"Module Polyglot_enUS not found".</strong> Only the <code>Polyglot</code> folder was copied. Copy all <code>Polyglot_*</code> folders too and restart the game.</p>
+<p><strong>An item is not found.</strong> Check that the language you search in is enabled (<code>/pg lang</code>) and try loose mode. Names come from client data tables, so some very new Forever items may be missing for now. Please report them on GitHub with the output of <code>/pg info</code>.</p>
+<p><strong>The game was updated.</strong> Polyglot tells you at login if its name database was built for another client build. A new version is published automatically; just update the addon.</p>
 
 <h3>Support</h3>
-<p>Bugs and missing items: <a href="https://github.com/VMuzalev/ItemLoc/issues">GitHub Issues</a>. Please include the output of <code>/il info</code>.</p>
+<p>Bugs and missing items: <a href="https://github.com/VMuzalev/Polyglot/issues">GitHub Issues</a>. Please include the output of <code>/pg info</code>.</p>
 
 <hr>
 
-<h2>ItemLoc (по-русски)</h2>
-<p><strong>Поиск предметов по названию на любом языке.</strong> Играете на одном языке, а название предмета нашли на сайте на другом? Вставьте его в окно ItemLoc и получите предмет с названиями на выбранных языках, иконкой и обычным тултипом из игры.</p>
+<h2>Polyglot (по-русски)</h2>
+<p><strong>Поиск предметов по названию на любом языке.</strong> Играете на одном языке, а название предмета нашли на сайте на другом? Вставьте его в окно Polyglot и получите предмет с названиями на выбранных языках, иконкой и обычным тултипом из игры.</p>
 <p><em>Пример: вы играете на русском и прочитали «Thunderfury» в английском гайде. Вставляете название и видите рядом «Громовая Ярость» и «Donnerfury».</em></p>
 
 <h3>Возможности</h3>
@@ -45,7 +46,7 @@
 <li><strong>Строгий и нестрогий поиск.</strong> Строгий требует полное название, нестрогий находит часть названия или несколько слов в любом порядке. Регистр не важен, в том числе для кириллицы и букв с диакритикой.</li>
 <li><strong>Избранное:</strong> отметьте предмет звёздочкой и открывайте список одной кнопкой.</li>
 <li><strong>Данные из самой игры:</strong> иконка, цвет качества, тип, уровень и полный тултип берутся из вашего клиента, поэтому всегда соответствуют версии игры. Shift+клик вставляет ссылку на предмет в чат.</li>
-<li><strong>Удобно открывать:</strong> кнопка у миникарты, команда <code>/il</code>, меню аддонов и назначаемая клавиша.</li>
+<li><strong>Удобно открывать:</strong> кнопка у миникарты, команда <code>/pg</code>, меню аддонов и назначаемая клавиша.</li>
 <li><strong>Интерфейс на русском и английском</strong>, переключается одной кнопкой RU/EN.</li>
 <li><strong>Не нагружает память:</strong> каждый язык лежит в отдельном модуле и загружается, только когда включён.</li>
 </ul>
@@ -53,22 +54,22 @@
 <h3>Быстрый старт</h3>
 <ol>
 <li>Установите аддон (см. ниже) и войдите в игру.</li>
-<li>Нажмите кнопку с книгой у миникарты или введите <code>/il</code>.</li>
+<li>Нажмите кнопку с книгой у миникарты или введите <code>/pg</code>.</li>
 <li>Вставьте название предмета и нажмите Enter.</li>
-<li>Нужен другой язык? Нажмите <strong>«Языки...»</strong> (или <code>/il lang</code>) и отметьте его.</li>
+<li>Нужен другой язык? Нажмите <strong>«Языки...»</strong> (или <code>/pg lang</code>) и отметьте его.</li>
 </ol>
-<p>Все команды: <code>/il help</code>.</p>
+<p>Все команды: <code>/pg help</code>.</p>
 
 <h3>Установка</h3>
-<p>Скопируйте <strong>все</strong> папки из архива (<code>ItemLoc</code>, <code>ItemLoc_enUS</code>, <code>ItemLoc_ruRU</code> и так далее) в <code>Interface\AddOns</code>. Ненужные языки можно удалить, кроме <code>ItemLoc_enUS</code>. После установки полностью перезапустите игру. В списке аддонов модули языков сгруппированы под ItemLoc.</p>
+<p>Скопируйте <strong>все</strong> папки из архива (<code>Polyglot</code>, <code>Polyglot_enUS</code>, <code>Polyglot_ruRU</code> и так далее) в <code>Interface\AddOns</code>. Ненужные языки можно удалить, кроме <code>Polyglot_enUS</code>. После установки полностью перезапустите игру. В списке аддонов модули языков сгруппированы под Polyglot.</p>
 
 <h3>Вопросы и ответы</h3>
-<p><strong>«Не найден модуль ItemLoc_enUS».</strong> Скопирована только папка <code>ItemLoc</code>. Скопируйте и все папки <code>ItemLoc_*</code>, затем перезапустите игру.</p>
-<p><strong>Предмет не находится.</strong> Проверьте, что язык, на котором вы ищете, включён (<code>/il lang</code>), и попробуйте нестрогий режим. Названия берутся из клиентских таблиц данных, поэтому самые новые предметы Forever могут пока отсутствовать. Сообщите о них на GitHub и приложите вывод <code>/il info</code>.</p>
-<p><strong>Игра обновилась.</strong> При входе ItemLoc сообщит, если база названий собрана для другой сборки клиента. Новая версия выходит автоматически, достаточно обновить аддон.</p>
+<p><strong>«Не найден модуль Polyglot_enUS».</strong> Скопирована только папка <code>Polyglot</code>. Скопируйте и все папки <code>Polyglot_*</code>, затем перезапустите игру.</p>
+<p><strong>Предмет не находится.</strong> Проверьте, что язык, на котором вы ищете, включён (<code>/pg lang</code>), и попробуйте нестрогий режим. Названия берутся из клиентских таблиц данных, поэтому самые новые предметы Forever могут пока отсутствовать. Сообщите о них на GitHub и приложите вывод <code>/pg info</code>.</p>
+<p><strong>Игра обновилась.</strong> При входе Polyglot сообщит, если база названий собрана для другой сборки клиента. Новая версия выходит автоматически, достаточно обновить аддон.</p>
 
 <h3>Поддержка</h3>
-<p>Ошибки и ненайденные предметы: <a href="https://github.com/VMuzalev/ItemLoc/issues">GitHub Issues</a>. Приложите вывод команды <code>/il info</code>.</p>
+<p>Ошибки и ненайденные предметы: <a href="https://github.com/VMuzalev/Polyglot/issues">GitHub Issues</a>. Приложите вывод команды <code>/pg info</code>.</p>
 
 <hr>
 <p><small>Item names, icons and data are &copy; Blizzard Entertainment. This project is unofficial and is not affiliated with Blizzard Entertainment. / Названия, иконки и данные предметов &copy; Blizzard Entertainment. Проект неофициальный и не связан с Blizzard Entertainment.</small></p>

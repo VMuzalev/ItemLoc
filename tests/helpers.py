@@ -47,7 +47,7 @@ def fake_download(count=9000, overrides=None, fail=()):
 @contextlib.contextmanager
 def build_workspace(download=None, interface="16001"):
     """Временная копия «корня репозитория» для build_data. Возвращает путь к ней."""
-    tmp = tempfile.mkdtemp(prefix="itemloc_test_")
+    tmp = tempfile.mkdtemp(prefix="polyglot_test_")
     old = (build_data.ROOT, build_data.MODULES_DIR, build_data.download, build_data.MIN_ITEMS,
            build_data.forever_build_candidates)
     try:
@@ -57,8 +57,8 @@ def build_workspace(download=None, interface="16001"):
         build_data.forever_build_candidates = lambda: ["1.60.1.70205"]
         if download:
             build_data.download = download
-        with open(os.path.join(tmp, "ItemLoc.toc"), "w", encoding="utf-8") as f:
-            f.write(f"## Interface: {interface}\n## Title: ItemLoc\nBuild.lua\nItemLoc.lua\n")
+        with open(os.path.join(tmp, "Polyglot.toc"), "w", encoding="utf-8") as f:
+            f.write(f"## Interface: {interface}\n## Title: Polyglot\nBuild.lua\nPolyglot.lua\n")
         yield tmp
     finally:
         (build_data.ROOT, build_data.MODULES_DIR, build_data.download, build_data.MIN_ITEMS,
@@ -112,7 +112,9 @@ C_Timer = { After = function(_, f) f() end }
 IsShiftKeyDown = function() return SHIFT end
 SHIFT = false
 LOADED = {}
-C_AddOns = { LoadAddOn = function(name)
+OLD_ADDONS = {}
+C_AddOns = { DoesAddOnExist = function(name) return OLD_ADDONS[name] == true end,
+  LoadAddOn = function(name)
     local src = read_module(name)
     if not src then return nil, "MISSING" end
     LOADED[#LOADED + 1] = name
@@ -153,9 +155,10 @@ EXPOSE = [
 
 
 class Game:
-    """Аддон ItemLoc, загруженный в настоящий Lua 5.1 с заглушками игрового API."""
+    """Аддон Polyglot, загруженный в настоящий Lua 5.1 с заглушками игрового API."""
 
-    def __init__(self, modules_dir, locale="ruRU", saved=None, client_build="70205", data_build="1.60.1.70205"):
+    def __init__(self, modules_dir, locale="ruRU", saved=None, client_build="70205", data_build="1.60.1.70205",
+                 old_addon=False, old_saved=None):
         self.lua = lua51.LuaRuntime(unpack_returned_tuples=True)
         L = self.lua
 
@@ -173,25 +176,29 @@ class Game:
         L.execute("GetLocale = function() return CLIENT_LOCALE end")
         L.execute(f'GetBuildInfo = function() return "1.60.1", "{client_build}", "Oct 1 2026", 16001 end')
         if data_build:
-            L.execute(f'ItemLocDataBuild = "{data_build}"')
-        with open(os.path.join(REPO, "ItemLoc.lua"), encoding="utf-8") as f:
+            L.execute(f'PolyglotDataBuild = "{data_build}"')
+        with open(os.path.join(REPO, "Polyglot.lua"), encoding="utf-8") as f:
             src = f.read()
         for old, new in EXPOSE:
-            assert old in src, f"в ItemLoc.lua не найдено: {old}"
+            assert old in src, f"в Polyglot.lua не найдено: {old}"
             src = src.replace(old, new)
-        chunk = L.eval("function(s) return loadstring(s, 'ItemLoc') end")(src)
+        chunk = L.eval("function(s) return loadstring(s, 'Polyglot') end")(src)
         assert not isinstance(chunk, tuple), chunk
-        chunk("ItemLoc")
+        chunk("Polyglot")
+        if old_addon:
+            L.execute("OLD_ADDONS.ItemLoc = true")
+        if old_saved is not None:
+            L.execute(f"ItemLocDB = {old_saved}")
         if saved is not None:
-            L.execute(f"ItemLocDB = {saved}")
-        self.fire("ADDON_LOADED", '"ItemLoc"')
+            L.execute(f"PolyglotDB = {saved}")
+        self.fire("ADDON_LOADED", '"Polyglot"')
 
     def fire(self, event, arg='nil'):
         self.lua.execute(f'for _, f in ipairs(FRAMES) do if f._scripts.OnEvent then '
                          f'f._scripts.OnEvent(f, "{event}", {arg}) end end')
 
     def slash(self, text=""):
-        self.lua.execute(f"SlashCmdList['ITEMLOC']({text!r})".replace("'", '"'))
+        self.lua.execute(f"SlashCmdList['POLYGLOT']({text!r})".replace("'", '"'))
 
     def search(self, query, strict=False, limit=5):
         """Возвращает (число результатов, [id:оценка ...])."""
@@ -213,7 +220,7 @@ class Game:
         return self.lua.eval('table.concat(LOADED, ",")')
 
     def printed(self):
-        return [v.replace("|cff33ff99ItemLoc:|r ", "") for v in self.lua.eval("PRINTED").values()]
+        return [v.replace("|cff33ff99Polyglot:|r ", "") for v in self.lua.eval("PRINTED").values()]
 
     def toggle_language(self, loc, on):
         self.lua.execute(f"checks.{loc}._checked = {str(on).lower()}; checks.{loc}._scripts.OnClick(checks.{loc})")

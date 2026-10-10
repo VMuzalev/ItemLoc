@@ -1,5 +1,5 @@
 <Bindings>
-    <Binding name="ITEMLOC_TOGGLE" header="ITEMLOC">
-        ItemLoc_Toggle()
+    <Binding name="POLYGLOT_TOGGLE" header="POLYGLOT">
+        Polyglot_Toggle()
     </Binding>
 </Bindings>

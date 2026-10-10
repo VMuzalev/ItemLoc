@@ -41,12 +41,12 @@ class Languages(AddonTestCase):
         g = self.game()
         self.assertEqual(g.loaded(), "")
         g.slash("")
-        self.assertEqual(g.loaded(), "ItemLoc_enUS,ItemLoc_ruRU")
+        self.assertEqual(g.loaded(), "Polyglot_enUS,Polyglot_ruRU")
 
     def test_enabling_a_language_loads_only_that_module(self):
         g = self.game(); g.slash("")
         g.toggle_language("deDE", True)
-        self.assertEqual(g.loaded(), "ItemLoc_enUS,ItemLoc_ruRU,ItemLoc_deDE")
+        self.assertEqual(g.loaded(), "Polyglot_enUS,Polyglot_ruRU,Polyglot_deDE")
         self.assertEqual(g.langs(), "deDE,ruRU")
 
     def test_disabled_language_is_not_searched(self):
@@ -58,7 +58,7 @@ class Languages(AddonTestCase):
         self.assertEqual(g.search("ruhestein")[0], 0)
 
     def test_missing_module_is_reported_but_others_work(self):
-        shutil.rmtree(os.path.join(self.modules, "ItemLoc_frFR"))
+        shutil.rmtree(os.path.join(self.modules, "Polyglot_frFR"))
         g = self.game(); g.slash("")
         g.toggle_language("frFR", True)
         self.assertIn("не найден", g.ev("statuses.frFR._text"))
@@ -67,10 +67,10 @@ class Languages(AddonTestCase):
         self.assertGreater(g.search("hearthstone")[0], 0)
 
     def test_missing_english_module_shows_reinstall_hint(self):
-        shutil.rmtree(os.path.join(self.modules, "ItemLoc_enUS"))
+        shutil.rmtree(os.path.join(self.modules, "Polyglot_enUS"))
         g = self.game(); g.slash("")
         g.type_and_search("item")
-        self.assertIn("ItemLoc_enUS", g.ev("status._text"))
+        self.assertIn("Polyglot_enUS", g.ev("status._text"))
 
     def test_empty_module_is_marked_as_no_data(self):
         with build_workspace(fake_download(count=300, overrides=NAMES, fail=("koKR",))) as root:
@@ -249,7 +249,7 @@ class Favorites(AddonTestCase):
 
     def test_favorites_are_saved_in_settings_and_survive_reload(self):
         self.star(1)
-        saved = self.g.ev("(function() local o = {} for k in pairs(ItemLocDB.favorites) do o[#o+1] = k end return table.concat(o, ',') end)()")
+        saved = self.g.ev("(function() local o = {} for k in pairs(PolyglotDB.favorites) do o[#o+1] = k end return table.concat(o, ',') end)()")
         self.assertEqual(saved, "2")
         g2 = self.game(locale="enUS", saved="{ favorites = { [3] = true }, seenWelcome = true }")
         self.assertIn("(1)", g2.ev("favBtn._text"))
@@ -292,7 +292,7 @@ class MinimapButton(AddonTestCase):
         self.g.lua.execute("minimapCheck = nil")   # (значение ниже берётся из панели)
         self.g.lua.execute("for _, f in ipairs(FRAMES) do end")
         self.assertIsNotNone(self.g.ev("COMPARTMENT"))   # пункт меню аддонов зарегистрирован
-        self.assertEqual(self.g.ev("COMPARTMENT.text"), "ItemLoc")
+        self.assertEqual(self.g.ev("COMPARTMENT.text"), "Polyglot")
 
 
 class InterfaceLanguage(AddonTestCase):
@@ -311,7 +311,7 @@ class InterfaceLanguage(AddonTestCase):
 
     def test_both_languages_have_the_same_keys(self):
         import re
-        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ItemLoc.lua"), encoding="utf-8").read()
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Polyglot.lua"), encoding="utf-8").read()
         block_en = src[src.index("    enUS = {"):src.index("    ruRU = {")]
         block_ru = src[src.index("    ruRU = {"):src.index("local CURRENT")]
         keys = lambda b: set(re.findall(r'\b([a-z][a-z_0-9]*) = "', b))
@@ -319,7 +319,7 @@ class InterfaceLanguage(AddonTestCase):
 
     def test_every_translation_key_used_in_code_exists(self):
         import re
-        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ItemLoc.lua"), encoding="utf-8").read()
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Polyglot.lua"), encoding="utf-8").read()
         used = {k for k in re.findall(r'T\("(\w+)"', src) if not k.endswith("_")}   # help_N формируются в цикле
         block_en = src[src.index("    enUS = {"):src.index("    ruRU = {")]
         defined = set(re.findall(r'\b([a-z][a-z_0-9]*) = "', block_en))
@@ -332,30 +332,63 @@ class HelpAndWelcome(AddonTestCase):
     def test_help_lists_commands(self):
         g = self.game(locale="enUS"); g.slash("help")
         text = "\n".join(g.printed())
-        for command in ("/il lang", "/il minimap", "/il info"):
+        for command in ("/pg lang", "/pg minimap", "/pg info"):
             self.assertIn(command, text)
 
     def test_welcome_is_shown_once(self):
         g = self.game(locale="ruRU")
         g.fire("PLAYER_LOGIN")
-        self.assertTrue(any("/il" in line for line in g.printed()))
-        self.assertTrue(g.ev("ItemLocDB.seenWelcome"))
+        self.assertTrue(any("/pg" in line for line in g.printed()))
+        self.assertTrue(g.ev("PolyglotDB.seenWelcome"))
         before = len(g.printed())
         g.fire("PLAYER_LOGIN")
         self.assertEqual(len(g.printed()), before)
 
 
+class Rename(AddonTestCase):
+    """Переименование ItemLoc -> Polyglot: настройки, предупреждение, команды."""
+
+    def test_settings_migrate_from_old_addon(self):
+        g = self.game(locale="enUS", old_saved='{ strict = true, favorites = { [7708] = true }, seenWelcome = true }')
+        self.assertTrue(g.ev("PolyglotDB.strict"))
+        self.assertTrue(g.ev("PolyglotDB.favorites[7708]"))
+        g.fire("PLAYER_LOGIN")
+        self.assertTrue(any("ItemLoc" in line for line in g.printed()))
+
+    def test_migration_is_a_copy(self):
+        g = self.game(locale="enUS", old_saved="{ favorites = { [1] = true } }")
+        g.lua.execute("PolyglotDB.favorites[2] = true")
+        self.assertIsNone(g.ev("ItemLocDB.favorites[2]"))
+
+    def test_no_migration_when_new_settings_exist(self):
+        g = self.game(locale="enUS", saved="{ strict = false }", old_saved="{ strict = true }")
+        self.assertFalse(g.ev("PolyglotDB.strict"))
+
+    def test_old_addon_warning(self):
+        g = self.game(locale="enUS", old_addon=True)
+        g.fire("PLAYER_LOGIN")
+        self.assertTrue(any("ItemLoc_*" in line for line in g.printed()))
+        g2 = self.game(locale="enUS")
+        g2.fire("PLAYER_LOGIN")
+        self.assertFalse(any("ItemLoc" in line for line in g2.printed()))
+
+    def test_slash_commands(self):
+        g = self.game(locale="enUS")
+        for name, expected in (("SLASH_POLYGLOT1", "/pg"), ("SLASH_POLYGLOT2", "/polyglot"), ("SLASH_POLYGLOT3", "/il")):
+            self.assertEqual(g.ev(name), expected)
+
+
 class KeyBinding(AddonTestCase):
     def test_binding_function_and_label_exist(self):
         g = self.game(locale="enUS")
-        self.assertEqual(g.ev("BINDING_HEADER_ITEMLOC"), "ItemLoc")
-        self.assertTrue(g.ev("type(ItemLoc_Toggle) == 'function'"))
-        g.lua.execute("ItemLoc_Toggle()")
+        self.assertEqual(g.ev("BINDING_HEADER_POLYGLOT"), "Polyglot")
+        self.assertTrue(g.ev("type(Polyglot_Toggle) == 'function'"))
+        g.lua.execute("Polyglot_Toggle()")
         self.assertTrue(g.ev("frame._shown"))
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Bindings.xml"), encoding="utf-8") as f:
             xml = f.read()
-        self.assertIn('name="ITEMLOC_TOGGLE"', xml)
-        self.assertIn("ItemLoc_Toggle()", xml)
+        self.assertIn('name="POLYGLOT_TOGGLE"', xml)
+        self.assertIn("Polyglot_Toggle()", xml)
 
 
 
@@ -367,14 +400,14 @@ class UiLanguageButton(AddonTestCase):
         g.lua.execute("uiBtn._scripts.OnClick()")
         self.assertEqual(g.ev("uiBtn._text"), "EN")
         self.assertIn("Favorites", g.ev("favBtn._text"))
-        self.assertEqual(g.ev("title._text"), "ItemLoc: item search")
+        self.assertEqual(g.ev("title._text"), "Polyglot: item search")
         g.lua.execute("uiBtn._scripts.OnClick()")
         self.assertEqual(g.ev("uiBtn._text"), "RU")
 
     def test_choice_is_saved_and_survives_reload(self):
         g = self.game(locale="ruRU")
         g.lua.execute("uiBtn._scripts.OnClick()")
-        self.assertEqual(g.ev("ItemLocDB.uiLang"), "enUS")
+        self.assertEqual(g.ev("PolyglotDB.uiLang"), "enUS")
         g2 = self.game(locale="ruRU", saved="{ uiLang = 'enUS', seenWelcome = true }")
         self.assertEqual(g2.ev("uiBtn._text"), "EN")
         self.assertIn("Favorites", g2.ev("favBtn._text"))
@@ -401,7 +434,7 @@ class UiLanguageButton(AddonTestCase):
         g.slash("ui ru");   self.assertEqual(g.ev("uiBtn._text"), "RU")
         g.slash("ui en");   g.slash("ui auto")
         self.assertEqual(g.ev("uiBtn._text"), "RU")             # вернулся язык клиента (ruRU)
-        self.assertIsNone(g.ev("ItemLocDB.uiLang"))
+        self.assertIsNone(g.ev("PolyglotDB.uiLang"))
 
     def test_auto_follows_client_language_for_other_locales(self):
         g = self.game(locale="deDE")

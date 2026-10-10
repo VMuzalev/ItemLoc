@@ -17,8 +17,8 @@ body:
   - type: textarea
     id: info
     attributes:
-      label: Вывод команды /il info
-      description: Выполните `/il info` в игре и вставьте строки из чата. Так я вижу сборку клиента и состояние языков.
+      label: Вывод команды /pg info
+      description: Выполните `/pg info` в игре и вставьте строки из чата. Так я вижу сборку клиента и состояние языков.
       render: text
     validations:
       required: true

@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Polyglot
+## Notes: Find items by name in any language: paste a name from a website and get its names in every language you choose (strict and loose search).
+## Notes-ruRU: Поиск предметов по названию на любом языке: вставьте название с сайта и получите названия на выбранных языках (строгий и нестрогий поиск).
+## Author: BatCry73
+## Version: @project-version@
+## Category: Localization
+## Category-ruRU: Локализация
+## Group: Polyglot
+## IconTexture: Interface\Icons\INV_Misc_Book_04
+## X-Curse-Project-ID: 1729520
+## SavedVariables: PolyglotDB
+
+Build.lua
+Polyglot.lua

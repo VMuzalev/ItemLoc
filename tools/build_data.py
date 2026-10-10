@@ -1,5 +1,5 @@
 """
-build_data.py - собирает данные для аддона ItemLoc.
+build_data.py - собирает данные для аддона Polyglot.
 
 Данные берутся из таблицы ItemSparse через wago.tools:
   1) клиент WoW Forever (главный источник);
@@ -8,12 +8,13 @@ build_data.py - собирает данные для аддона ItemLoc.
 
 Запуск:    python tools/build_data.py
            python tools/build_data.py --check   (только определить новейшую сборку, ничего не писать)
+           python tools/build_data.py --find 7708   (диагностика: есть ли предмет в таблицах wago.tools)
 Результат:
   Build.lua                           метка сборки (читается основным аддоном)
-  Modules/ItemLoc_<локаль>/           по одному модулю на язык (загружаются по требованию)
+  Modules/Polyglot_<локаль>/           по одному модулю на язык (загружаются по требованию)
 
-Если репозиторий лежит прямо в Interface\\AddOns\\ItemLoc, модули дополнительно копируются
-в Interface\\AddOns\\ItemLoc_<локаль>, чтобы игра их увидела (как в готовом архиве).
+Если репозиторий лежит прямо в Interface\\AddOns\\Polyglot, модули дополнительно копируются
+в Interface\\AddOns\\Polyglot_<локаль>, чтобы игра их увидела (как в готовом архиве).
 """
 import contextlib
 import csv
@@ -41,7 +42,7 @@ DISCOVERY_URLS = (
 )
 
 # Локаль WoW (она же код языка в wago.tools) -> подпись для списка аддонов.
-# Список должен совпадать с move-folders в .pkgmeta и с LOCALES в ItemLoc.lua.
+# Список должен совпадать с move-folders в .pkgmeta и с LOCALES в Polyglot.lua.
 LOCALES = {
     "enUS": "English",
     "ruRU": "Русский",
@@ -70,7 +71,7 @@ CHUNK = 4000   # записей в одном блоке (у Lua есть лим
 # ---------------------------------------------------------------- поиск сборок
 
 def _fetch_text(url, timeout=60):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (ItemLoc builder)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Polyglot builder)"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read().decode("utf-8", errors="replace")
 
@@ -104,10 +105,10 @@ def forever_build_candidates():
 
 # ---------------------------------------------------------------- загрузка
 
-def download(build, locale, attempts=3):
-    url = f"https://wago.tools/db2/ItemSparse/csv?build={build}&locale={locale}"
+def download(build, locale, attempts=3, table="ItemSparse"):
+    url = f"https://wago.tools/db2/{table}/csv?build={build}&locale={locale}"
     print("Скачиваю:", url)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (ItemLoc builder)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Polyglot builder)"})
     for attempt in range(1, attempts + 1):
         try:
             with urllib.request.urlopen(req, timeout=180) as r:
@@ -212,9 +213,9 @@ def lua_str(s):
 
 
 def read_interface():
-    """Номер Interface берётся из основного ItemLoc.toc, чтобы модули всегда совпадали с ним."""
+    """Номер Interface берётся из основного Polyglot.toc, чтобы модули всегда совпадали с ним."""
     try:
-        with open(os.path.join(ROOT, "ItemLoc.toc"), encoding="utf-8-sig") as f:
+        with open(os.path.join(ROOT, "Polyglot.toc"), encoding="utf-8-sig") as f:
             for line in f:
                 if line.lower().startswith("## interface:"):
                     return line.split(":", 1)[1].strip()
@@ -224,24 +225,26 @@ def read_interface():
 
 
 def write_module(loc, label, names, interface):
-    folder = os.path.join(MODULES_DIR, f"ItemLoc_{loc}")
+    folder = os.path.join(MODULES_DIR, f"Polyglot_{loc}")
     os.makedirs(folder, exist_ok=True)
 
-    with open(os.path.join(folder, f"ItemLoc_{loc}.toc"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(folder, f"Polyglot_{loc}.toc"), "w", encoding="utf-8", newline="\n") as f:
         f.write(f"## Interface: {interface}\n")
-        f.write(f"## Title: ItemLoc: {label} ({loc})\n")
-        f.write(f"## Notes: Названия предметов для ItemLoc, язык {loc}. Загружается по требованию.\n")
+        f.write(f"## Title: Polyglot: {label} ({loc})\n")
+        f.write(f"## Notes: Названия предметов для Polyglot, язык {loc}. Загружается по требованию.\n")
         f.write("## LoadOnDemand: 1\n")
-        f.write("## Dependencies: ItemLoc\n")
-        f.write("## Group: ItemLoc\n")   # в списке аддонов модули сворачиваются под основным (клиент 11.1.0+)
+        f.write("## Dependencies: Polyglot\n")
+        f.write("## Category: Localization\n")        # раздел в списке аддонов (11.1.0+)
+        f.write("## Category-ruRU: Локализация\n")
+        f.write("## Group: Polyglot\n")   # в списке аддонов модули сворачиваются под основным (клиент 11.1.0+)
         f.write("## IconTexture: Interface\\Icons\\INV_Misc_Book_04\n")   # иконка в списке аддонов
         f.write("## Version: @project-version@\n")
         f.write("Data.lua\n")
 
     with open(os.path.join(folder, "Data.lua"), "w", encoding="utf-8", newline="\n") as f:
-        f.write("ItemLocData = ItemLocData or {}\n")
+        f.write("PolyglotData = PolyglotData or {}\n")
         if not names:
-            f.write(f'ItemLocData["{loc}"] = {{ n = {{}}, l = {{}}, empty = true }}\n')
+            f.write(f'PolyglotData["{loc}"] = {{ n = {{}}, l = {{}}, empty = true }}\n')
             return 0
         ids = sorted(i for i, n in names.items() if n)
         f.write("local n, l = {}, {}\n")
@@ -252,7 +255,7 @@ def write_module(loc, label, names, interface):
                 name = names[item_id]
                 f.write(f"n[{item_id}]={lua_str(name)}\nl[{item_id}]={lua_str(name.lower())}\n")
             f.write("end)\n")
-        f.write(f'ItemLocData["{loc}"] = {{ n = n, l = l }}\n')
+        f.write(f'PolyglotData["{loc}"] = {{ n = n, l = l }}\n')
         return len(ids)
 
 
@@ -262,11 +265,49 @@ def copy_to_addons(locales):
     if os.path.basename(addons).lower() != "addons":
         return
     for loc in locales:
-        src = os.path.join(MODULES_DIR, f"ItemLoc_{loc}")
-        dst = os.path.join(addons, f"ItemLoc_{loc}")
+        src = os.path.join(MODULES_DIR, f"Polyglot_{loc}")
+        dst = os.path.join(addons, f"Polyglot_{loc}")
         shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst)
     print(f"Модули скопированы в {addons}")
+
+
+def find_item(item_id):
+    """Диагностика: показывает, есть ли предмет в таблицах Forever и Classic Era и под какими названиями.
+    Проверяются ItemSparse (то, что мы используем) и ItemSearchName (возможный запасной источник)."""
+    sources = (("Forever", forever_build_candidates()), ("Classic Era", CLASSIC_ERA_BUILDS))
+    tables = ("ItemSparse", "ItemSearchName")
+    print(f"Ищу предмет {item_id} в таблицах wago.tools...")
+    for label, candidates in sources:
+        build = None
+        for candidate in candidates:                       # первая сборка, для которой таблица скачивается
+            try:
+                download(candidate, "enUS")
+                build = candidate
+                break
+            except urllib.error.URLError:
+                continue
+        if build is None:
+            print(f"  {label}: ни одна сборка не скачалась")
+            continue
+        for table in tables:
+            parts = []
+            for loc in ("enUS", "ruRU"):
+                try:
+                    reader = csv.DictReader(io.StringIO(download(build, loc, table=table)))
+                    cols = reader.fieldnames or []
+                    if "ID" not in cols or "Display_lang" not in cols:
+                        parts.append(f"{loc}: нет колонок ID/Display_lang (есть: {', '.join(cols[:8])})")
+                        continue
+                    total, found = 0, None
+                    for row in reader:
+                        total += 1
+                        if row["ID"] == str(item_id):
+                            found = row["Display_lang"]
+                    parts.append(f"{loc}: " + (f"«{found}»" if found else "нет записи") + f" (строк в таблице: {total})")
+                except urllib.error.URLError as e:
+                    parts.append(f"{loc}: таблица недоступна ({e})")
+            print(f"  {label} {build} | {table}: " + "; ".join(parts))
 
 
 def check_latest_build():
@@ -290,6 +331,12 @@ def main():
     if "--check" in sys.argv:
         check_latest_build()
         return
+    if "--find" in sys.argv:
+        try:
+            find_item(int(sys.argv[sys.argv.index("--find") + 1]))
+        except (IndexError, ValueError):
+            sys.exit("Использование: python tools/build_data.py --find <ID предмета>")
+        return
     forever, forever_build = load_source("Forever", forever_build_candidates())
     era, _ = load_source("Classic Era", CLASSIC_ERA_BUILDS)
     names_by_locale = validate(merge(forever, era))
@@ -305,7 +352,7 @@ def main():
         print(f"  {loc}: {count if count else 'пустой модуль'}")
 
     with open(os.path.join(ROOT, "Build.lua"), "w", encoding="utf-8", newline="\n") as f:
-        f.write(f"ItemLocDataBuild = {lua_str(forever_build)}\n")
+        f.write(f"PolyglotDataBuild = {lua_str(forever_build)}\n")
 
     copy_to_addons(LOCALES)
     print(f"Готово: сборка Forever {forever_build}, модулей: {len(LOCALES)}")

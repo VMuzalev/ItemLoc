@@ -1,7 +1,7 @@
 name: Auto update
 
 # Раз в сутки проверяет:
-#  1) не изменился ли номер Interface (обновляет ItemLoc.toc);
+#  1) не изменился ли номер Interface (обновляет Polyglot.toc);
 #  2) не появилась ли новая сборка клиента Forever (ищется автоматически на wago.tools и сервере Blizzard).
 # Если что-то изменилось, выпускает новую версию (тег vX.Y.Z) и запускает workflow Release.
 # Данные собирает и публикует Release, а сборку в data_build.txt он записывает после успешного выпуска.
@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Обновить номер Interface в ItemLoc.toc
+      - name: Обновить номер Interface в Polyglot.toc
         uses: p3lim/toc-interface-updater@v4
         continue-on-error: true      # если определить номер не вышло, сборку данных всё равно проверим
         with:
@@ -73,8 +73,8 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- ItemLoc.toc; then
-            git add ItemLoc.toc
+          if ! git diff --quiet -- Polyglot.toc; then
+            git add Polyglot.toc
             git commit -m "Автообновление: номер Interface"
           fi
           git tag -a "$next" -m "Автообновление: данные сборки ${NEW_BUILD}"

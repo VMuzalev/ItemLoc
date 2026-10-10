@@ -8,11 +8,11 @@ fail=0
 err() { echo "::error::$1"; fail=1; }
 has() { echo "$listing" | grep -qE "[[:space:]]$1\$"; }
 
-for f in ItemLoc/ItemLoc.toc ItemLoc/ItemLoc.lua ItemLoc/Build.lua; do
+for f in Polyglot/Polyglot.toc Polyglot/Polyglot.lua Polyglot/Build.lua; do
   has "$f" || err "В архиве нет $f"
 done
 
-modules=$(grep -oP '^\s+ItemLoc/Modules/\K[^:]+' .pkgmeta)
+modules=$(grep -oP '^\s+Polyglot/Modules/\K[^:]+' .pkgmeta)
 count=0
 for m in $modules; do
   count=$((count + 1))
@@ -21,10 +21,10 @@ for m in $modules; do
 done
 [ "$count" -gt 0 ] || err "В .pkgmeta не найдено ни одного модуля"
 
-echo "$listing" | grep -qE "[[:space:]]ItemLoc/Modules/.*Data\.lua\$" \
-  && err "Модули остались внутри ItemLoc/Modules и не вынесены на верхний уровень"
+echo "$listing" | grep -qE "[[:space:]]Polyglot/Modules/.*Data\.lua\$" \
+  && err "Модули остались внутри Polyglot/Modules и не вынесены на верхний уровень"
 for extra in tools tests docs .github; do
-  echo "$listing" | grep -qE "[[:space:]]ItemLoc/$extra/" && err "Папка $extra попала в архив"
+  echo "$listing" | grep -qE "[[:space:]]Polyglot/$extra/" && err "Папка $extra попала в архив"
 done
 
 if [ "$fail" -eq 0 ]; then

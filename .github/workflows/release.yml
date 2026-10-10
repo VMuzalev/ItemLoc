@@ -72,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          build=$(grep -oP '^ItemLocDataBuild = "\K[^"]+' Build.lua)
+          build=$(grep -oP '^PolyglotDataBuild = "\K[^"]+' Build.lua)
           api="repos/${GITHUB_REPOSITORY}/contents/data_build.txt"
           current=$(gh api "$api" --jq '.content' | base64 -d | tr -d '[:space:]' || true)
           if [ "$build" = "$current" ]; then

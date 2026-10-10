@@ -19,7 +19,7 @@ body:
   - type: textarea
     id: info
     attributes:
-      label: Вывод команды /il info
+      label: Вывод команды /pg info
       render: text
     validations:
       required: true

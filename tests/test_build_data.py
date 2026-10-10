@@ -99,14 +99,16 @@ class FullBuild(unittest.TestCase):
         with build_workspace(fake_download(), interface="16002") as root:
             run_build()
             modules = sorted(os.listdir(os.path.join(root, "Modules")))
-            self.assertEqual(modules, sorted(f"ItemLoc_{loc}" for loc in b.LOCALES))
+            self.assertEqual(modules, sorted(f"Polyglot_{loc}" for loc in b.LOCALES))
             with open(os.path.join(root, "Build.lua"), encoding="utf-8") as f:
-                self.assertEqual(f.read().strip(), 'ItemLocDataBuild = "1.60.1.70205"')
-            toc = read(root, "Modules", "ItemLoc_ruRU", "ItemLoc_ruRU.toc")
-            self.assertIn("## Interface: 16002", toc)        # берётся из основного ItemLoc.toc
+                self.assertEqual(f.read().strip(), 'PolyglotDataBuild = "1.60.1.70205"')
+            toc = read(root, "Modules", "Polyglot_ruRU", "Polyglot_ruRU.toc")
+            self.assertIn("## Interface: 16002", toc)        # берётся из основного Polyglot.toc
             self.assertIn("## LoadOnDemand: 1", toc)
-            self.assertIn("## Dependencies: ItemLoc", toc)
-            self.assertIn("## Group: ItemLoc", toc)          # группировка в списке аддонов
+            self.assertIn("## Dependencies: Polyglot", toc)
+            self.assertIn("## Group: Polyglot", toc)          # группировка в списке аддонов
+            self.assertIn("## Category: Localization", toc)   # категория на двух языках
+            self.assertIn("## Category-ruRU: Локализация", toc)
             self.assertIn("## IconTexture: Interface\\Icons\\INV_Misc_Book_04", toc)   # иконка в списке аддонов
 
     def test_data_files_load_in_lua51_across_chunks(self):
@@ -115,24 +117,24 @@ class FullBuild(unittest.TestCase):
             run_build()
             lua = lua51.LuaRuntime()
             for loc in ("enUS", "ruRU"):
-                lua.execute(read(root, "Modules", f"ItemLoc_{loc}", "Data.lua"))
-            self.assertEqual(lua.eval('ItemLocData.ruRU.n[8999]'), "Предмет 8999")
-            self.assertEqual(lua.eval('ItemLocData.ruRU.l[8999]'), "предмет 8999")
-            self.assertEqual(lua.eval('(function() local c = 0 for _ in pairs(ItemLocData.enUS.n) do c = c + 1 end return c end)()'), 9000)
+                lua.execute(read(root, "Modules", f"Polyglot_{loc}", "Data.lua"))
+            self.assertEqual(lua.eval('PolyglotData.ruRU.n[8999]'), "Предмет 8999")
+            self.assertEqual(lua.eval('PolyglotData.ruRU.l[8999]'), "предмет 8999")
+            self.assertEqual(lua.eval('(function() local c = 0 for _ in pairs(PolyglotData.enUS.n) do c = c + 1 end return c end)()'), 9000)
 
     def test_special_characters_are_escaped(self):
         names = {5: 'Quote " and \\ backslash', 6: "Ärmel и Ёлка"}
         with build_workspace(fake_download(overrides={"enUS": names})) as root:
             run_build()
             lua = lua51.LuaRuntime()
-            lua.execute(read(root, "Modules", "ItemLoc_enUS", "Data.lua"))
-            self.assertEqual(lua.eval("ItemLocData.enUS.n[5]"), 'Quote " and \\ backslash')
-            self.assertEqual(lua.eval("ItemLocData.enUS.l[6]"), "ärmel и ёлка")
+            lua.execute(read(root, "Modules", "Polyglot_enUS", "Data.lua"))
+            self.assertEqual(lua.eval("PolyglotData.enUS.n[5]"), 'Quote " and \\ backslash')
+            self.assertEqual(lua.eval("PolyglotData.enUS.l[6]"), "ärmel и ёлка")
 
     def test_optional_language_missing_gives_empty_module(self):
         with build_workspace(fake_download(fail=("koKR",))) as root:
             run_build()
-            data = read(root, "Modules", "ItemLoc_koKR", "Data.lua")
+            data = read(root, "Modules", "Polyglot_koKR", "Data.lua")
             self.assertIn("empty = true", data)
 
     def test_required_language_failure_writes_nothing(self):
@@ -154,6 +156,45 @@ class FullBuild(unittest.TestCase):
             finally:
                 helpers.sys.argv = old_argv
             self.assertEqual(out.getvalue().strip(), "1.60.1.70205")
+
+
+
+def run_find(item_id):
+    import contextlib, io
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        b.find_item(item_id)
+    return out.getvalue()
+
+
+class FindItem(unittest.TestCase):
+    @staticmethod
+    def fake(build, locale, attempts=3, table="ItemSparse"):
+        from helpers import csv_text
+        rows = [(1, "Hearthstone")]
+        if table == "ItemSearchName" and build == "1.60.1.70205":
+            rows.append((7708, "Necrotic Wand" if locale == "enUS" else "Некротический жезл"))
+        if table == "ItemSparse" and build.startswith("1.15"):
+            rows.append((2721, "Holy Shroud"))
+        return csv_text(rows)
+
+    def test_item_only_in_search_table_is_reported_as_such(self):
+        with build_workspace(self.fake):
+            text = run_find(7708)
+        self.assertIn("Forever 1.60.1.70205 | ItemSparse: enUS: нет записи", text)
+        self.assertIn("Forever 1.60.1.70205 | ItemSearchName: enUS: «Necrotic Wand»", text)
+        self.assertIn("ruRU: «Некротический жезл»", text)
+
+    def test_item_only_in_classic_era(self):
+        with build_workspace(self.fake):
+            text = run_find(2721)
+        self.assertIn("Classic Era 1.15.9.69722 | ItemSparse: enUS: «Holy Shroud»", text)
+
+    def test_item_nowhere(self):
+        with build_workspace(self.fake):
+            text = run_find(999999)
+        self.assertNotIn("«", text)
+        self.assertIn("нет записи", text)
 
 
 if __name__ == "__main__":
